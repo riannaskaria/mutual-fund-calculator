@@ -6,6 +6,42 @@ Node.js/Express REST API that calculates the estimated future value of a mutual 
 
 When a calculation is requested, the backend makes two external API calls in sequence, then applies the CAPM formula.
 
+```
+  User Request
+  (ticker, principal, years)
+          │
+          ▼
+┌─────────────────────────┐
+│  Step 1: Fetch Beta      │  betaService.js
+│  Newton Analytics API    │  → beta (e.g. 0.2794)
+│  12-month rolling β      │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│  Step 2: Fetch Expected  │  historicalReturnService.js
+│  Return — Yahoo Finance  │  → expectedReturnRate (e.g. 0.0555 = 5.55%)
+│  Last year Jan 1–Dec 31  │    (lastClose - firstClose) / firstClose
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│  Step 3: CAPM Rate       │  mutualFundService.js
+│  r = rf + β(Rm - rf)     │  → capmRate (e.g. 0.0491)
+│  rf = 4.25% (10yr T-bond)│
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│  Step 4: Future Value    │  mutualFundService.js
+│  FV = P * e^(r * t)      │  → futureValue (e.g. $16,288.04)
+│  Continuous compounding  │
+└────────────┬────────────┘
+             │
+             ▼
+       JSON Response
+```
+
 ### Step 1 — Fetch beta (Newton Analytics API)
 
 Handled by: [`backend/src/services/betaService.js`](src/services/betaService.js)
