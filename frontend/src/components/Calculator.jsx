@@ -3,14 +3,29 @@ import Dropdown from './Dropdown';
 import Input from './Input';
 import { fetchMutualFunds, fetchFutureValue } from '../api/mutualFundApi';
 
+function formatCurrency(num) {
+  if (num === '' || num == null || isNaN(num)) return '';
+  const n = Number(num);
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
+}
+
+function parseCurrency(str) {
+  if (str == null || str === '') return '';
+  const parsed = parseInt(String(str).replace(/\D/g, ''), 10);
+  return isNaN(parsed) ? '' : parsed;
+}
+
 export default function Calculator() {
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [selectedFund, setSelectedFund] = useState('');
-  const [investmentAmount, setInvestmentAmount] = useState('');
-  const [years, setYears] = useState('');
+  const [investmentAmount, setInvestmentAmount] = useState(1000);
+  const [futureContributions, setFutureContributions] = useState(5000);
+  const [years, setYears] = useState(30);
+  const [rateOfReturn, setRateOfReturn] = useState(6);
+  const [expenseRatio, setExpenseRatio] = useState(0.25);
 
   const [futureValue, setFutureValue] = useState(null);
   const [calculating, setCalculating] = useState(false);
@@ -28,11 +43,20 @@ export default function Calculator() {
     setCalcError(null);
     setFutureValue(null);
 
-    const amount = parseFloat(investmentAmount);
-    const yearsNum = parseFloat(years);
+    const amount = Number(investmentAmount);
+    const yearsNum = Number(years);
+    const rate = Number(rateOfReturn);
+    const ratio = Number(expenseRatio);
 
-    if (!selectedFund || !amount || !yearsNum || amount <= 0 || yearsNum <= 0) {
-      setCalcError('Please fill in all fields with valid values.');
+    if (
+      !selectedFund ||
+      !amount || amount <= 0 ||
+      yearsNum <= 0 ||
+      (futureContributions !== '' && Number(futureContributions) < 0) ||
+      (rate != null && !isNaN(rate) && rate < 0) ||
+      (ratio != null && !isNaN(ratio) && ratio < 0)
+    ) {
+      setCalcError('Please fill in all required fields with valid values.');
       return;
     }
 
@@ -56,7 +80,7 @@ export default function Calculator() {
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto">
+    <div className="w-full max-w-2xl mx-auto">
       <form onSubmit={handleCalculate} className="space-y-6">
         <Dropdown
           id="mutual-fund"
@@ -68,27 +92,67 @@ export default function Calculator() {
           error={error}
         />
 
-        <Input
-          id="investment-amount"
-          label="Initial Investment ($)"
-          type="number"
-          value={investmentAmount}
-          onChange={setInvestmentAmount}
-          placeholder="e.g. 10000"
-          min={1}
-          step={0.01}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Input
+            id="investment-amount"
+            label="Initial investment amount"
+            required
+            prefix="$"
+            type="text"
+            inputMode="decimal"
+            value={formatCurrency(investmentAmount)}
+            onChange={(v) => setInvestmentAmount(parseCurrency(v) ?? 0)}
+            placeholder="0"
+          />
+
+          <Input
+            id="future-contributions"
+            label="Future planned contributions (per year)"
+            required
+            prefix="$"
+            type="text"
+            inputMode="decimal"
+            value={formatCurrency(futureContributions)}
+            onChange={(v) => setFutureContributions(parseCurrency(v) ?? 0)}
+            placeholder="0"
+          />
+
+          <Input
+            id="years"
+            label="Time horizon (years)"
+            required
+            type="number"
+            value={years}
+            onChange={setYears}
+            placeholder="e.g. 30"
+            min={1}
+            max={50}
+            step={1}
+          />
+
+          <Input
+            id="rate-of-return"
+            label="Rate of return (%)"
+            required
+            type="number"
+            value={rateOfReturn}
+            onChange={setRateOfReturn}
+            placeholder="e.g. 6"
+            min={0}
+            step={0.01}
+          />
+        </div>
 
         <Input
-          id="years"
-          label="Time Horizon (years)"
+          id="expense-ratio"
+          label="Fund expense ratio (%)"
+          required
           type="number"
-          value={years}
-          onChange={setYears}
-          placeholder="e.g. 5"
-          min={1}
-          max={50}
-          step={1}
+          value={expenseRatio}
+          onChange={setExpenseRatio}
+          placeholder="e.g. 0.25"
+          min={0}
+          step={0.01}
         />
 
         <button
