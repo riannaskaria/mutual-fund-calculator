@@ -109,6 +109,7 @@ function MutualFundCalculator() {
   const [rateOfReturn, setRateOfReturn] = useState('');
   const [expenseRatio, setExpenseRatio] = useState(0.25);
   const [result, setResult] = useState(null);
+  const isFormValid = principal !== '' && futureContributions !== '' && years !== '' && expenseRatio !== '';
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const capmRate = RISK_FREE_RATE + fund.beta * (fund.historicalReturn - RISK_FREE_RATE);
@@ -117,17 +118,19 @@ function MutualFundCalculator() {
 
   const handleCalculate = (e) => {
     e?.preventDefault();
+    if (!isFormValid) return;
     const yearsNum = years === '' || isNaN(Number(years)) ? 1 : Math.max(1, Math.min(50, Math.floor(Number(years))));
     const contrib = Number(futureContributions) || 0;
-    const fvPrincipal = calcFV(principal, rate, yearsNum);
+    const princ = Number(principal) || 0;
+    const fvPrincipal = calcFV(princ, rate, yearsNum);
     const fvContributions = rate > 0 && contrib > 0
       ? contrib * (Math.exp(rate * yearsNum) - 1) / (Math.exp(rate) - 1)
       : contrib * yearsNum;
     const fv = fvPrincipal + fvContributions;
-    const totalInvested = principal + contrib * yearsNum;
+    const totalInvested = princ + contrib * yearsNum;
     const gain = fv - totalInvested;
     const gainPct = totalInvested > 0 ? ((gain / totalInvested) * 100).toFixed(2) : "0.00";
-    setResult({ fv, gain, gainPct, rate, principal, years: yearsNum, totalInvested });
+    setResult({ fv, gain, gainPct, rate, principal: princ, years: yearsNum, totalInvested });
   };
 
   return (
@@ -180,10 +183,10 @@ function MutualFundCalculator() {
             {/* 5 input fields */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
               <div>
-                <Input id="capm-initial" label="Initial investment amount" required prefix="$" type="text" inputMode="decimal" value={formatCurrencyInput(principal)} onChange={(v) => { const p = parseCurrencyInput(v); setPrincipal(p === '' ? 0 : p); setResult(null); }} placeholder="0" />
+                <Input id="capm-initial" label="Initial investment amount" required prefix="$" type="text" inputMode="decimal" value={formatCurrencyInput(principal)} onChange={(v) => { const p = parseCurrencyInput(v); setPrincipal(p === '' ? '' : p); setResult(null); }} placeholder="0" />
               </div>
               <div>
-                <Input id="capm-future" label="Future planned contributions (per year)" required prefix="$" type="text" inputMode="decimal" value={formatCurrencyInput(futureContributions)} onChange={(v) => { const p = parseCurrencyInput(v); setFutureContributions(p === '' ? 0 : p); setResult(null); }} placeholder="0" />
+                <Input id="capm-future" label="Future planned contributions (per year)" required prefix="$" type="text" inputMode="decimal" value={formatCurrencyInput(futureContributions)} onChange={(v) => { const p = parseCurrencyInput(v); setFutureContributions(p === '' ? '' : p); setResult(null); }} placeholder="0" />
               </div>
               <div>
                 <Input id="capm-years" label="Time horizon (years)" required type="number" value={years} onChange={(v) => { setYears(v); setResult(null); }} placeholder="e.g. 30" min={1} max={50} step={1} />
@@ -193,9 +196,9 @@ function MutualFundCalculator() {
               </div>
             </div>
             <div style={{ marginBottom: 28 }}>
-              <Input id="capm-expense" label="Fund expense ratio (%)" required type="number" value={expenseRatio} onChange={(v) => { const n = Number(v); if (!isNaN(n) && n >= 0) { setExpenseRatio(n); setResult(null); } }} placeholder="e.g. 0.25" min={0} step={0.01} />
+              <Input id="capm-expense" label="Fund expense ratio (%)" required type="number" value={expenseRatio} onChange={(v) => { setExpenseRatio(v); setResult(null); }} placeholder="e.g. 0.25" min={0} step={0.01} />
             </div>
-            <button type="submit" style={{ width: "100%", background: "linear-gradient(135deg,#7A5A10,#C9A84C,#7A5A10)", border: "none", borderRadius: 10, padding: "16px", color: "#ffffff", fontSize: 15, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: "0 4px 24px rgba(201,168,76,0.28)", transition: "opacity 0.2s, transform 0.15s" }} onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}>
+            <button type="submit" disabled={!isFormValid} style={{ width: "100%", background: isFormValid ? "linear-gradient(135deg,#7A5A10,#C9A84C,#7A5A10)" : "#9CA3AF", border: "none", borderRadius: 10, padding: "16px", color: "#ffffff", fontSize: 15, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", cursor: isFormValid ? "pointer" : "not-allowed", fontFamily: "'Inter', sans-serif", boxShadow: isFormValid ? "0 4px 24px rgba(201,168,76,0.28)" : "none", transition: "opacity 0.2s, transform 0.15s" }} onMouseEnter={e => { if (isFormValid) { e.currentTarget.style.opacity = "0.88"; e.currentTarget.style.transform = "translateY(-1px)"; } }} onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}>
               Calculate Future Value
             </button>
           </div>
