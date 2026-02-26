@@ -105,7 +105,7 @@ function MutualFundCalculator() {
   const [fund, setFund] = useState(FUNDS[0]);
   const [principal, setPrincipal] = useState(10000);
   const [futureContributions, setFutureContributions] = useState(5000);
-  const [years, setYears] = useState(10);
+  const [years, setYears] = useState('10');
   const [rateOfReturn, setRateOfReturn] = useState('');
   const [expenseRatio, setExpenseRatio] = useState(0.25);
   const [result, setResult] = useState(null);
@@ -117,16 +117,17 @@ function MutualFundCalculator() {
 
   const handleCalculate = (e) => {
     e?.preventDefault();
+    const yearsNum = years === '' || isNaN(Number(years)) ? 1 : Math.max(1, Math.min(50, Math.floor(Number(years))));
     const contrib = Number(futureContributions) || 0;
-    const fvPrincipal = calcFV(principal, rate, years);
+    const fvPrincipal = calcFV(principal, rate, yearsNum);
     const fvContributions = rate > 0 && contrib > 0
-      ? contrib * (Math.exp(rate * years) - 1) / (Math.exp(rate) - 1)
-      : contrib * years;
+      ? contrib * (Math.exp(rate * yearsNum) - 1) / (Math.exp(rate) - 1)
+      : contrib * yearsNum;
     const fv = fvPrincipal + fvContributions;
-    const totalInvested = principal + contrib * years;
+    const totalInvested = principal + contrib * yearsNum;
     const gain = fv - totalInvested;
     const gainPct = totalInvested > 0 ? ((gain / totalInvested) * 100).toFixed(2) : "0.00";
-    setResult({ fv, gain, gainPct, rate, principal, years, totalInvested });
+    setResult({ fv, gain, gainPct, rate, principal, years: yearsNum, totalInvested });
   };
 
   return (
@@ -185,7 +186,7 @@ function MutualFundCalculator() {
                 <Input id="capm-future" label="Future planned contributions (per year)" required prefix="$" type="text" inputMode="decimal" value={formatCurrencyInput(futureContributions)} onChange={(v) => { const p = parseCurrencyInput(v); setFutureContributions(p === '' ? 0 : p); setResult(null); }} placeholder="0" />
               </div>
               <div>
-                <Input id="capm-years" label="Time horizon (years)" required type="number" value={years} onChange={(v) => { const n = Number(v); if (!isNaN(n) && n >= 1) { setYears(n); setResult(null); } }} placeholder="e.g. 30" min={1} max={50} step={1} />
+                <Input id="capm-years" label="Time horizon (years)" required type="number" value={years} onChange={(v) => { setYears(v); setResult(null); }} placeholder="e.g. 30" min={1} max={50} step={1} />
               </div>
               <div>
                 <Input id="capm-rate" label="Rate of return (%) (optional override)" type="number" value={rateOfReturn} onChange={(v) => { setRateOfReturn(v); setResult(null); }} placeholder="Uses CAPM if blank" min={0} step={0.01} />
