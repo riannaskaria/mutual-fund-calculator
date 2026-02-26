@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import Dropdown from './Dropdown';
 import Input from './Input';
+import MetricCard from './MetricCard';
 import { fetchMutualFunds, fetchFutureValue } from '../api/mutualFundApi';
+import GrowthChart from './GrowthChart';
+
 
 export default function Calculator() {
   const [funds, setFunds] = useState([]);
@@ -113,15 +116,51 @@ export default function Calculator() {
         )}
 
         {futureValue && (
-          <div className="p-6 rounded-xl bg-emerald-50 border border-emerald-200">
-            <p className="text-sm font-medium text-emerald-800 mb-1">Estimated Future Value</p>
-            <p className="text-2xl font-bold text-emerald-900">
-              $
-              {(futureValue.futureValue ?? futureValue.value ?? futureValue).toLocaleString(
-                'en-US',
-                { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-              )}
-            </p>
+          <div className="space-y-6">
+            {/* Main Result */}
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 shadow-sm">
+              <p className="text-sm font-medium text-emerald-700 mb-1">
+                Estimated Future Value
+              </p>
+              <p className="text-3xl font-bold text-emerald-900">
+                $
+                {futureValue.futureValue.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+
+            {/* Historical Growth Chart */}
+            <GrowthChart
+              principal={parseFloat(investmentAmount)}
+              capmRate={futureValue.capmRate}
+              years={parseInt(years, 10)}
+            />
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <MetricCard label="Beta" value={futureValue.beta?.toFixed(4)} />
+              <MetricCard
+                label="Expected Return"
+                value={`${(futureValue.expectedReturnRate * 100).toFixed(2)}%`}
+              />
+              <MetricCard
+                label="Risk-Free Rate"
+                value={`${(0.0425 * 100).toFixed(2)}%`}
+              />
+              <MetricCard
+                label="CAPM Rate"
+                value={`${(futureValue.capmRate * 100).toFixed(2)}%`}
+              />
+            </div>
+
+            {/* Formula Section */}
+            <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700">
+              <p className="font-semibold mb-2">Model Used</p>
+              <p>r = rf + β (Rm − rf)</p>
+              <p>FV = P · e^(r · t)</p>
+            </div>
           </div>
         )}
       </form>
