@@ -134,7 +134,7 @@ function MutualFundCalculator() {
   };
 
   return (
-    <div style={{ width: "100%", maxWidth: 760, margin: "0 auto 48px" }}>
+    <div style={{ width: "100%", maxWidth: 960, margin: "0 auto 48px" }}>
       <h2 style={{ fontSize: 18, fontWeight: 600, color: "#374151", marginBottom: 16 }}>CAPM Calculator</h2>
       <form onSubmit={handleCalculate}>
         <div style={{ background: "#ffffff", border: "1px solid #E5E7EB", borderRadius: 16, overflow: "hidden", boxShadow: "0 28px 80px rgba(0,0,0,0.1)" }}>
@@ -230,7 +230,7 @@ function MutualFundCalculator() {
 
 export default function Calculator() {
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto">
       <MutualFundCalculator />
     </div>
   );
