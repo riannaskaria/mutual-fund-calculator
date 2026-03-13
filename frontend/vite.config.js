@@ -23,6 +23,18 @@ export default defineConfig({
           });
         }
       },
+      '/yahoo-query': {
+        target: 'https://query2.finance.yahoo.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/yahoo-query/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+            proxyReq.removeHeader('origin');
+            proxyReq.removeHeader('referer');
+          });
+        }
+      },
       '/google-news-rss': {
         target: 'https://news.google.com',
         changeOrigin: true,
