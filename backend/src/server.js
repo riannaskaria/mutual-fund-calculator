@@ -8,9 +8,9 @@ const app = express();
 const PORT = 8080;
 
 // Allow Vite dev server at localhost:3000
-app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:3001'] }));
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use('/api', fundsRouter);
 app.use('/api/bot', botRouter);
 

@@ -80,14 +80,31 @@ function validateTicker(ticker) {
   }
 }
 
+// Cache beta + expectedReturn per ticker for 5 minutes so the screen calculator
+// and the bot always use identical inputs regardless of live API fluctuations.
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const ratesCache = new Map(); // ticker → { beta, expectedReturnRate, expiresAt }
+
+async function fetchRates(ticker) {
+  const cached = ratesCache.get(ticker);
+  if (cached && Date.now() < cached.expiresAt) {
+    return { beta: cached.beta, expectedReturnRate: cached.expectedReturnRate };
+  }
+  const [beta, expectedReturnRate] = await Promise.all([
+    fetchBeta(ticker),
+    fetchExpectedReturn(ticker),
+  ]);
+  ratesCache.set(ticker, { beta, expectedReturnRate, expiresAt: Date.now() + CACHE_TTL_MS });
+  return { beta, expectedReturnRate };
+}
+
 // Steps:
-//  1. Fetch beta from Newton Analytics
-//  2. Fetch expected return from Yahoo Finance (previous year)
+//  1. Fetch beta from Newton Analytics  (cached 5 min)
+//  2. Fetch expected return from Yahoo Finance (previous year, cached 5 min)
 //  3. r = riskFreeRate + beta * (expectedReturn - riskFreeRate)  [CAPM]
 //  4. FV = principal * e^(r * years)                             [continuous compounding]
 async function calculate(ticker, principal, years) {
-  const beta = await fetchBeta(ticker);
-  const expectedReturnRate = await fetchExpectedReturn(ticker);
+  const { beta, expectedReturnRate } = await fetchRates(ticker);
 
   const capmRate = RISK_FREE_RATE + beta * (expectedReturnRate - RISK_FREE_RATE);
   const futureValue = principal * Math.exp(capmRate * years);
