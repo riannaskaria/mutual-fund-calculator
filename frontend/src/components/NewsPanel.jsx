@@ -49,7 +49,7 @@ function getDomain(source) {
   return SOURCE_BRANDS[source]?.domain || source.toLowerCase().replace(/[^a-z]/g, '') + '.com';
 }
 
-export default function NewsPanel({ onArticlesUpdate }) {
+export default function NewsPanel({ onArticlesUpdate, embedded = false }) {
   const T = useT();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -114,7 +114,7 @@ export default function NewsPanel({ onArticlesUpdate }) {
   };
 
   return (
-    <div style={{ width: 288, background: T.newsItemBg, borderLeft: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
+    <div style={{ width: embedded ? '100%' : 288, height: '100%', background: T.newsItemBg, borderLeft: embedded ? 'none' : `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '11px 14px 10px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
