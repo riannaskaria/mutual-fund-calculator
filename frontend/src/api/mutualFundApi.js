@@ -121,3 +121,45 @@ export async function fetchFutureValue(fundId, amount, years) {
   const response = await fetch(`${baseURL}/future-value?${params}`);
   return handleResponse(response);
 }
+
+export async function fetchFundDiscovery(limit = 8) {
+  if (useMock) {
+    return {
+      asOfDate: new Date().toISOString().slice(0, 10),
+      generatedAt: new Date().toISOString(),
+      stale: false,
+      funds: [],
+      scoring: { weights: { recentReturn: 0.35, volatility: 0.25, expenseRatio: 0.2, aum: 0.1, beta: 0.1 } },
+    };
+  }
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(`${baseURL}/discovery?${params}`);
+  return handleResponse(response);
+}
+
+export async function fetchFundDiscoveryBreakdown(ticker) {
+  if (useMock) return null;
+  const response = await fetch(`${baseURL}/discovery/fund/${encodeURIComponent(ticker)}`);
+  return handleResponse(response);
+}
+
+export async function fetchFundDiscoveryStatus() {
+  if (useMock) {
+    return {
+      lastAttemptAt: null,
+      lastSuccessAt: new Date().toISOString(),
+      lastError: null,
+      stale: false,
+      snapshotDate: new Date().toISOString().slice(0, 10),
+      fundCount: 0,
+    };
+  }
+  const response = await fetch(`${baseURL}/discovery/status`);
+  return handleResponse(response);
+}
+
+export async function refreshFundDiscovery() {
+  if (useMock) return { ok: true, generatedAt: new Date().toISOString(), stale: false, fallbackUsed: false };
+  const response = await fetch(`${baseURL}/discovery/refresh`, { method: 'POST' });
+  return handleResponse(response);
+}

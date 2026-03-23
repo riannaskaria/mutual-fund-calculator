@@ -9,6 +9,7 @@ import ChartPanel     from './ChartPanel';
 import NewsPanel      from './NewsPanel';
 import GoldmanBot     from './GoldmanBot';
 import SettingsPanel  from './SettingsPanel';
+import FundDiscoveryPanel from './FundDiscoveryPanel';
 
 function TopBar({ onSettings }) {
   return (
@@ -150,7 +151,15 @@ export default function TradingDashboard() {
               setYears={setYears}
             />
           </div>
-          <NewsPanel onArticlesUpdate={setNewsArticles} />
+          <div style={{ width: 288, borderLeft: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', background: T.newsItemBg, minHeight: 0, padding: '8px 8px 10px', gap: 10 }}>
+            <div style={{ flex: 0.56, minHeight: 0, border: `1px solid ${T.border}`, borderRadius: 10, overflow: 'hidden' }}>
+              <NewsPanel onArticlesUpdate={setNewsArticles} embedded />
+            </div>
+            <div style={{ height: 1, background: T.border, margin: '0 4px', flexShrink: 0 }} />
+            <div style={{ flex: 0.44, minHeight: 0 }}>
+              <FundDiscoveryPanel compact />
+            </div>
+          </div>
         </div>
         <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} theme={theme} setTheme={setTheme} />
         <GoldmanBot funds={funds} quote={quote} articles={newsArticles} selectedFund={selectedFund} />

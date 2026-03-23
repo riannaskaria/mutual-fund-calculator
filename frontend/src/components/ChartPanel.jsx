@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
 import {
   AreaChart, Area, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import { useT } from '../theme';
 import { fetchYahooPriceHistory } from '../api/mutualFundApi';
+import CAPMFormulaCard from './CAPMFormulaCard';
 
 const TABS = ['Price Chart', 'CAPM Calculator'];
 
@@ -167,12 +166,6 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
         {activeTab === 'Price Chart' && <PriceChart ticker={ticker} quote={quote} />}
 
         {activeTab === 'CAPM Calculator' && (() => {
-          const rf = (futureValue?.riskFreeRate ?? 0.0425) * 100;
-          const rm = (futureValue?.expectedReturnRate ?? 0) * 100;
-          const b  = futureValue?.beta ?? 0;
-          const r  = (futureValue?.capmRate ?? 0) * 100;
-          const fv = futureValue?.futureValue ?? futureValue?.value ?? 0;
-
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
               {/* Inputs */}
@@ -209,42 +202,17 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
                 </button>
               </div>
 
-              {/* Equation */}
-              <div style={{ flex: 1, background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ fontSize: 16, textAlign: 'center' }}>
-                  <div dangerouslySetInnerHTML={{ __html: katex.renderToString(
-                    futureValue
-                      ? `FV = \\underbrace{\\$${principal.toLocaleString()}}_{P} \\cdot e^{\\Bigl(\\underbrace{${rf.toFixed(2)}\\%}_{r_f}\\; +\\; \\underbrace{${b.toFixed(4)}}_{\\beta}(\\underbrace{${rm.toFixed(2)}\\%}_{R_m} - \\underbrace{${rf.toFixed(2)}\\%}_{r_f})\\Bigr)\\,\\cdot\\,\\underbrace{${yearsNum}}_{t}} = \\boldsymbol{\\$${fv.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}}`
-                      : `FV = P \\cdot e^{\\,\\bigl(r_f + \\beta(R_m - r_f)\\bigr)\\,\\cdot\\, t}`,
-                    { throwOnError: false, displayMode: true }
-                  )}} />
-                </div>
+              <div style={{ flex: 1 }}>
+                <CAPMFormulaCard
+                  futureValue={futureValue}
+                  principal={principal}
+                  years={yearsNum}
+                />
               </div>
-
-              {/* Legend */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px 20px', flexShrink: 0 }}>
-                {[
-                  { sym: 'r_f',    desc: 'Risk-free rate (10yr Treasury)' },
-                  { sym: 'R_m',    desc: 'Historical return (last year)'  },
-                  { sym: '\\beta', desc: 'Beta — sensitivity vs S&P 500'  },
-                  { sym: 'r',      desc: 'CAPM rate (expected return)'     },
-                  { sym: 'P',      desc: 'Principal investment'            },
-                  { sym: 't',      desc: 'Time horizon in years'           },
-                ].map(item => (
-                  <div key={item.sym} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
-                    <span style={{ fontSize: 12, minWidth: 28 }} dangerouslySetInnerHTML={{ __html: katex.renderToString(item.sym, { throwOnError: false }) }} />
-                    <span style={{ fontSize: 10, color: T.textFaint }}>{item.desc}</span>
-                  </div>
-                ))}
-              </div>
-
-              <style>{`
-                .katex { font-size: 1em !important; color: ${T.text}; }
-                .katex-display { margin: 0 !important; overflow: visible !important; }
-              `}</style>
             </div>
           );
         })()}
+
       </div>
     </div>
   );
