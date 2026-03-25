@@ -2,15 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { THEMES, ThemeCtx, CAPM_SUPPORTED, getFundTicker, getFundBaseName } from '../theme';
 import { fetchFutureValue, fetchYahooQuote } from '../api/mutualFundApi';
 
-import TickerBar      from './TickerBar';
+import TickerBar from './TickerBar';
 import PositionsPanel from './PositionsPanel';
-import FundHeader     from './FundHeader';
-import ChartPanel     from './ChartPanel';
-import NewsPanel      from './NewsPanel';
-import GoldmanBot     from './GoldmanBot';
-import SettingsPanel  from './SettingsPanel';
+import FundHeader from './FundHeader';
+import ChartPanel from './ChartPanel';
+import NewsPanel from './NewsPanel';
+import GoldmanBot from './GoldmanBot';
+import SettingsPanel from './SettingsPanel';
+import AccountPanel from './AccountPanel';
 
-function TopBar({ onSettings }) {
+function TopBar({ onSettings, onAccount }) {
   return (
     <ThemeCtx.Consumer>{T => (
       <div style={{
@@ -27,6 +28,12 @@ function TopBar({ onSettings }) {
           <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Fund Dashboard</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button onClick={onAccount} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', borderRadius: 4 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </button>
           <button onClick={onSettings} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', borderRadius: 4 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
@@ -51,6 +58,7 @@ export default function TradingDashboard() {
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [theme, setTheme] = useState('light');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [newsArticles, setNewsArticles] = useState([]);
   const T = THEMES[theme];
 
@@ -124,7 +132,7 @@ export default function TradingDashboard() {
     <ThemeCtx.Provider value={T}>
       <div style={{ height: '100vh', background: T.pageBg, display: 'flex', flexDirection: 'column', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
         <TickerBar />
-        <TopBar onSettings={() => setSettingsOpen(true)} />
+        <TopBar onSettings={() => setSettingsOpen(true)} onAccount={() => setAccountOpen(true)} />
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
           <PositionsPanel
             funds={funds}
@@ -154,6 +162,7 @@ export default function TradingDashboard() {
         </div>
         <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} theme={theme} setTheme={setTheme} />
         <GoldmanBot funds={funds} quote={quote} articles={newsArticles} selectedFund={selectedFund} />
+        <AccountPanel open={accountOpen} onClose={() => setAccountOpen(false)} funds={funds} quote={quote} selectedFund={selectedFund} />
       </div>
     </ThemeCtx.Provider>
   );
