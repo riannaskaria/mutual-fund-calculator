@@ -1,8 +1,25 @@
+import { useState, useEffect } from 'react';
 import { useT } from '../theme';
+import { loadProfile } from './AccountPanel'; // shared localStorage key
 
 export default function SettingsPanel({ open, onClose, theme, setTheme }) {
   const T = useT();
+  const [profile, setProfile] = useState(loadProfile);
+  // Reread profile from localStorage each time the panel opens
+  useEffect(() => {
+    if (open) setProfile(loadProfile());
+  }, [open]);
+
   if (!open) return null;
+
+  const initials = (() => {
+    const name = profile.name;
+    if (!name) return '?';
+    const parts = name.trim().split(' ').filter(Boolean);
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  })();
+
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.45)' }} />
@@ -21,11 +38,19 @@ export default function SettingsPanel({ open, onClose, theme, setTheme }) {
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 10, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Account</div>
             <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#003A70', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: '#fff', flexShrink: 0 }}>JD</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 42, height: 42, borderRadius: '50%', background: '#003A70',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, fontWeight: 700, color: '#fff', flexShrink: 0,
+                }}>{initials}</div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>John Doe</div>
-                  <div style={{ fontSize: 11, color: T.textMute }}>john.doe@example.com</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>
+                    {profile.name || <span style={{ color: T.textMute, fontStyle: 'italic' }}>No name set</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: T.textMute }}>
+                    {profile.email || <span style={{ fontStyle: 'italic' }}>No email set</span>}
+                  </div>
                 </div>
               </div>
             </div>
