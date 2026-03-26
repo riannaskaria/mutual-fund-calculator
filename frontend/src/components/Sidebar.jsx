@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { GS_BRAND, FONT_UI } from "../theme";
 
 const GLASS = {
     background: "rgba(255,255,255,0.45)",
@@ -64,7 +65,7 @@ function Toggle({ checked, onChange }) {
     return (
         <button onClick={() => onChange(!checked)} style={{
             width: 36, height: 20, borderRadius: 10, border: "none", cursor: "pointer",
-            background: checked ? "#003A70" : "rgba(0,0,0,0.12)",
+            background: checked ? GS_BRAND.navy : "rgba(0,0,0,0.12)",
             position: "relative", transition: "background 0.2s", flexShrink: 0, padding: 0,
         }}>
             <div style={{
@@ -307,18 +308,18 @@ export default function Sidebar({ isOpen, onToggle }) {
 
     // Source brand config: color, favicon domain, font style
     const SOURCE_BRANDS = {
-        "Bloomberg": { color: "#472090", domain: "bloomberg.com", fontFamily: "'Inter', sans-serif", fontWeight: 800, letterSpacing: "-0.02em", textTransform: "none", fontSize: 11 },
-        "Reuters": { color: "#FF8000", domain: "reuters.com", fontFamily: "'Inter', sans-serif", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: 9 },
+        "Bloomberg": { color: "#472090", domain: "bloomberg.com", fontFamily: FONT_UI, fontWeight: 800, letterSpacing: "-0.02em", textTransform: "none", fontSize: 11 },
+        "Reuters": { color: "#FF8000", domain: "reuters.com", fontFamily: FONT_UI, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: 9 },
         "The Wall Street Journal": { color: "#0274B6", domain: "wsj.com", fontFamily: "'Georgia', 'Times New Roman', serif", fontWeight: 700, letterSpacing: "0em", textTransform: "none", fontSize: 11 },
         "Financial Times": { color: "#FFF1E5", textColor: "#33302E", domain: "ft.com", fontFamily: "'Georgia', serif", fontWeight: 700, letterSpacing: "0em", textTransform: "none", fontStyle: "italic", fontSize: 11 },
-        "CNBC": { color: "#005594", domain: "cnbc.com", fontFamily: "'Inter', sans-serif", fontWeight: 900, letterSpacing: "0.06em", textTransform: "uppercase", fontSize: 10 },
+        "CNBC": { color: "#005594", domain: "cnbc.com", fontFamily: FONT_UI, fontWeight: 900, letterSpacing: "0.06em", textTransform: "uppercase", fontSize: 10 },
         "Barron's": { color: "#222", domain: "barrons.com", fontFamily: "'Georgia', serif", fontWeight: 700, letterSpacing: "0.01em", textTransform: "none", fontSize: 11 },
-        "MarketWatch": { color: "#00AC4E", domain: "marketwatch.com", fontFamily: "'Inter', sans-serif", fontWeight: 800, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
-        "Yahoo Finance": { color: "#6001D2", domain: "finance.yahoo.com", fontFamily: "'Inter', sans-serif", fontWeight: 800, letterSpacing: "-0.01em", textTransform: "none", fontSize: 10 },
-        "Investopedia": { color: "#1D4ED8", domain: "investopedia.com", fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
-        "Morningstar": { color: "#C62828", domain: "morningstar.com", fontFamily: "'Inter', sans-serif", fontWeight: 800, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
-        "Seeking Alpha": { color: "#F97316", domain: "seekingalpha.com", fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
-        "Benzinga": { color: "#0D9488", domain: "benzinga.com", fontFamily: "'Inter', sans-serif", fontWeight: 800, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
+        "MarketWatch": { color: "#00AC4E", domain: "marketwatch.com", fontFamily: FONT_UI, fontWeight: 800, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
+        "Yahoo Finance": { color: "#6001D2", domain: "finance.yahoo.com", fontFamily: FONT_UI, fontWeight: 800, letterSpacing: "-0.01em", textTransform: "none", fontSize: 10 },
+        "Investopedia": { color: "#1D4ED8", domain: "investopedia.com", fontFamily: FONT_UI, fontWeight: 700, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
+        "Morningstar": { color: "#C62828", domain: "morningstar.com", fontFamily: FONT_UI, fontWeight: 800, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
+        "Seeking Alpha": { color: "#F97316", domain: "seekingalpha.com", fontFamily: FONT_UI, fontWeight: 700, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
+        "Benzinga": { color: "#0D9488", domain: "benzinga.com", fontFamily: FONT_UI, fontWeight: 800, letterSpacing: "0em", textTransform: "none", fontSize: 10 },
     };
 
     // Helper to get domain for favicon
@@ -340,11 +341,11 @@ export default function Sidebar({ isOpen, onToggle }) {
         { id: "settings", icon: Icons.settings, label: "Settings" },
     ];
 
-    const planColors = ["#003A70", "#10B981", "#3B82F6", "#8B5CF6", "#E67E22", "#EC4899"];
+    const planColors = [GS_BRAND.navy, "#10B981", "#3B82F6", "#8B5CF6", "#E67E22", "#EC4899"];
 
     const inputStyle = {
         width: "100%", padding: "8px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.08)",
-        background: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: "'Inter', sans-serif",
+        background: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: FONT_UI,
         outline: "none", color: "#0A1628", boxSizing: "border-box",
     };
 
@@ -376,7 +377,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                     <div style={{ ...GLASS, padding: "5px", display: "flex", gap: 2 }}>
                         {navItems.map(item => (
                             <button key={item.id} onClick={() => setActiveTab(item.id)} style={{
-                                flex: 1, background: activeTab === item.id ? "rgba(0,58,112,0.08)" : "transparent",
+                                flex: 1, background: activeTab === item.id ? "rgba(9,44,97,0.08)" : "transparent",
                                 border: "none", borderRadius: 12, padding: "10px 4px", cursor: "pointer",
                                 transition: "all 0.2s", outline: "none",
                                 display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
@@ -384,8 +385,8 @@ export default function Sidebar({ isOpen, onToggle }) {
                                 onMouseEnter={e => { if (activeTab !== item.id) e.currentTarget.style.background = "rgba(0,0,0,0.03)"; }}
                                 onMouseLeave={e => { if (activeTab !== item.id) e.currentTarget.style.background = "transparent"; }}
                             >
-                                {item.icon(activeTab === item.id ? "#003A70" : "#9CA3AF")}
-                                <span style={{ fontSize: 9, letterSpacing: "0.04em", color: activeTab === item.id ? "#003A70" : "#9CA3AF", fontWeight: activeTab === item.id ? 600 : 400 }}>{item.label}</span>
+                                {item.icon(activeTab === item.id ? GS_BRAND.navy : "#9CA3AF")}
+                                <span style={{ fontSize: 9, letterSpacing: "0.04em", color: activeTab === item.id ? GS_BRAND.navy : "#9CA3AF", fontWeight: activeTab === item.id ? 600 : 400 }}>{item.label}</span>
                             </button>
                         ))}
                     </div>
@@ -414,7 +415,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                                             >{Icons.x}</button>
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: 16 }}>
                                                 <div>
-                                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#003A70" }}>{f.ticker}</span>
+                                                    <span style={{ fontSize: 12, fontWeight: 700, color: GS_BRAND.navy }}>{f.ticker}</span>
                                                     <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>{f.name}</div>
                                                 </div>
                                                 <div style={{ fontSize: 14, fontWeight: 600, color: f.trend === "up" ? "#10B981" : "#EF4444" }}>
@@ -436,10 +437,10 @@ export default function Sidebar({ isOpen, onToggle }) {
                                             <div style={{ display: "flex", gap: 6 }}>
                                                 <input style={{ ...inputStyle, flex: 1 }} placeholder="Ticker (e.g. VOO)" value={customFund.ticker} onChange={e => setCustomFund({ ...customFund, ticker: e.target.value.toUpperCase() })} />
                                                 <button onClick={fetchCustomFundData} disabled={apiLoading || !customFund.ticker} style={{
-                                                    background: "rgba(0,58,112,0.06)", border: "none", borderRadius: 8, padding: "0 10px",
+                                                    background: "rgba(9,44,97,0.06)", border: "none", borderRadius: 8, padding: "0 10px",
                                                     cursor: apiLoading || !customFund.ticker ? "not-allowed" : "pointer",
-                                                    fontSize: 11, fontWeight: 600, color: "#003A70", whiteSpace: "nowrap", transition: "background 0.2s"
-                                                }} onMouseEnter={e => !apiLoading && customFund.ticker && (e.currentTarget.style.background = "rgba(0,58,112,0.1)")} onMouseLeave={e => !apiLoading && customFund.ticker && (e.currentTarget.style.background = "rgba(0,58,112,0.06)")}>
+                                                    fontSize: 11, fontWeight: 600, color: GS_BRAND.navy, whiteSpace: "nowrap", transition: "background 0.2s"
+                                                }} onMouseEnter={e => !apiLoading && customFund.ticker && (e.currentTarget.style.background = "rgba(9,44,97,0.1)")} onMouseLeave={e => !apiLoading && customFund.ticker && (e.currentTarget.style.background = "rgba(9,44,97,0.06)")}>
                                                     {apiLoading ? "..." : "Fetch"}
                                                 </button>
                                             </div>
@@ -460,7 +461,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                                                     });
                                                 }
                                             }} style={{
-                                                width: "100%", background: "#003A70", color: "#fff", border: "none", borderRadius: 8, padding: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", opacity: customFund.ticker && customFund.returnPct ? 1 : 0.5
+                                                width: "100%", background: GS_BRAND.navy, color: "#fff", border: "none", borderRadius: 8, padding: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", opacity: customFund.ticker && customFund.returnPct ? 1 : 0.5
                                             }}>Add Custom Fund</button>
                                         </div>
 
@@ -472,10 +473,10 @@ export default function Sidebar({ isOpen, onToggle }) {
                                                     cursor: "pointer", textAlign: "left", transition: "background 0.15s", display: "flex",
                                                     justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#0A1628",
                                                 }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(0,58,112,0.04)"}
+                                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(9,44,97,0.04)"}
                                                     onMouseLeave={e => e.currentTarget.style.background = "none"}
                                                 >
-                                                    <span><strong style={{ color: "#003A70" }}>{f.ticker}</strong> {f.name}</span>
+                                                    <span><strong style={{ color: GS_BRAND.navy }}>{f.ticker}</strong> {f.name}</span>
                                                     <span style={{ color: "#10B981", fontSize: 11 }}>{f.returnPct}%</span>
                                                 </button>
                                             ))}
@@ -490,12 +491,12 @@ export default function Sidebar({ isOpen, onToggle }) {
                                     </div>
                                 ) : (
                                     <button onClick={() => setShowAddFav(true)} style={{
-                                        width: "100%", marginTop: 10, background: "none", border: "1px dashed rgba(0,58,112,0.25)",
-                                        borderRadius: 12, padding: "10px", cursor: "pointer", color: "#003A70", fontSize: 12,
+                                        width: "100%", marginTop: 10, background: "none", border: "1px dashed rgba(9,44,97,0.25)",
+                                        borderRadius: 12, padding: "10px", cursor: "pointer", color: GS_BRAND.navy, fontSize: 12,
                                         fontWeight: 500, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                                     }}
-                                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(0,58,112,0.5)"; e.currentTarget.style.background = "rgba(0,58,112,0.03)"; }}
-                                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(0,58,112,0.25)"; e.currentTarget.style.background = "none"; }}
+                                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(9,44,97,0.5)"; e.currentTarget.style.background = "rgba(9,44,97,0.03)"; }}
+                                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(9,44,97,0.25)"; e.currentTarget.style.background = "none"; }}
                                     >{Icons.plus} Add favorite</button>
                                 )}
                             </div>
@@ -547,7 +548,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                                             <input style={inputStyle} placeholder="Amount saved ($)" type="number" value={planForm.saved} onChange={e => setPlanForm({ ...planForm, saved: e.target.value })} />
                                             <div style={{ display: "flex", gap: 6 }}>
                                                 <button onClick={savePlan} style={{
-                                                    flex: 1, background: "#003A70", border: "none", borderRadius: 8, padding: "8px",
+                                                    flex: 1, background: GS_BRAND.navy, border: "none", borderRadius: 8, padding: "8px",
                                                     color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer",
                                                 }}>Save</button>
                                                 <button onClick={() => { setShowAddPlan(false); setEditingPlan(null); setPlanForm({ label: "", target: "", saved: "" }); }} style={{
@@ -559,12 +560,12 @@ export default function Sidebar({ isOpen, onToggle }) {
                                     </div>
                                 ) : (
                                     <button onClick={() => { setShowAddPlan(true); setEditingPlan(null); setPlanForm({ label: "", target: "", saved: "" }); }} style={{
-                                        width: "100%", marginTop: 10, background: "none", border: "1px dashed rgba(0,58,112,0.25)",
-                                        borderRadius: 12, padding: "10px", cursor: "pointer", color: "#003A70", fontSize: 12,
+                                        width: "100%", marginTop: 10, background: "none", border: "1px dashed rgba(9,44,97,0.25)",
+                                        borderRadius: 12, padding: "10px", cursor: "pointer", color: GS_BRAND.navy, fontSize: 12,
                                         fontWeight: 500, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                                     }}
-                                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(0,58,112,0.5)"; e.currentTarget.style.background = "rgba(0,58,112,0.03)"; }}
-                                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(0,58,112,0.25)"; e.currentTarget.style.background = "none"; }}
+                                        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(9,44,97,0.5)"; e.currentTarget.style.background = "rgba(9,44,97,0.03)"; }}
+                                        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(9,44,97,0.25)"; e.currentTarget.style.background = "none"; }}
                                     >{Icons.plus} New savings goal</button>
                                 )}
                             </div>
@@ -608,7 +609,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                                             border: "1px solid rgba(0,0,0,0.06)",
                                             transition: "border-color 0.2s, box-shadow 0.2s",
                                         }}
-                                        onFocus={e => { e.currentTarget.style.borderColor = "rgba(0,58,112,0.3)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0,58,112,0.06)"; }}
+                                        onFocus={e => { e.currentTarget.style.borderColor = "rgba(9,44,97,0.3)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(9,44,97,0.06)"; }}
                                         onBlur={e => { e.currentTarget.style.borderColor = "rgba(0,0,0,0.06)"; e.currentTarget.style.boxShadow = "none"; }}
                                     />
                                     {newsQuery && (
@@ -628,7 +629,7 @@ export default function Sidebar({ isOpen, onToggle }) {
 
                                 {newsLoading && !liveNews ? (
                                     <div style={{ textAlign: "center", padding: "32px 0" }}>
-                                        <div style={{ width: 20, height: 20, border: "2px solid rgba(0,58,112,0.15)", borderTopColor: "#003A70", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 8px" }} />
+                                        <div style={{ width: 20, height: 20, border: "2px solid rgba(9,44,97,0.15)", borderTopColor: GS_BRAND.navy, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 8px" }} />
                                         <div style={{ color: "#9CA3AF", fontSize: 11 }}>{newsQuery ? `Searching "${newsQuery}"...` : "Loading latest news..."}</div>
                                     </div>
                                 ) : (
@@ -643,7 +644,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                                                 ? (() => { const m = Math.floor((Date.now() / 1000 - n.time) / 60); return m < 60 ? `${m}m ago` : m < 1440 ? `${Math.floor(m / 60)}h ago` : `${Math.floor(m / 1440)}d ago`; })()
                                                 : n.time;
                                             const tag = n.tag || "Market";
-                                            const brand = SOURCE_BRANDS[n.source] || { color: "#003A70", fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: "0em", textTransform: "none", fontSize: 10 };
+                                            const brand = SOURCE_BRANDS[n.source] || { color: GS_BRAND.navy, fontFamily: FONT_UI, fontWeight: 700, letterSpacing: "0em", textTransform: "none", fontSize: 10 };
                                             const srcColor = brand.color;
                                             const isHero = i === 0;
                                             const faviconUrl = `https://www.google.com/s2/favicons?domain=${getDomain(n.source)}&sz=32`;
@@ -655,15 +656,15 @@ export default function Sidebar({ isOpen, onToggle }) {
                                                     rel="noopener noreferrer"
                                                     style={{
                                                         textDecoration: "none",
-                                                        background: isHero ? "linear-gradient(135deg, rgba(0,58,112,0.04), rgba(255,255,255,0.7))" : "rgba(255,255,255,0.5)",
-                                                        border: isHero ? "1px solid rgba(0,58,112,0.1)" : "1px solid rgba(0,0,0,0.04)",
+                                                        background: isHero ? "linear-gradient(135deg, rgba(9,44,97,0.04), rgba(255,255,255,0.7))" : "rgba(255,255,255,0.5)",
+                                                        border: isHero ? "1px solid rgba(9,44,97,0.1)" : "1px solid rgba(0,0,0,0.04)",
                                                         borderRadius: 14,
                                                         padding: isHero ? "18px 16px" : "12px 14px",
                                                         cursor: "pointer", transition: "all 0.2s",
                                                         display: "block",
                                                     }}
-                                                    onMouseEnter={e => { e.currentTarget.style.background = isHero ? "linear-gradient(135deg, rgba(0,58,112,0.06), rgba(255,255,255,0.85))" : "rgba(255,255,255,0.75)"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.05)"; }}
-                                                    onMouseLeave={e => { e.currentTarget.style.background = isHero ? "linear-gradient(135deg, rgba(0,58,112,0.04), rgba(255,255,255,0.7))" : "rgba(255,255,255,0.5)"; e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background = isHero ? "linear-gradient(135deg, rgba(9,44,97,0.06), rgba(255,255,255,0.85))" : "rgba(255,255,255,0.75)"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.05)"; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = isHero ? "linear-gradient(135deg, rgba(9,44,97,0.04), rgba(255,255,255,0.7))" : "rgba(255,255,255,0.5)"; e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
                                                 >
                                                     {/* Source branding with favicon */}
                                                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: isHero ? 10 : 7 }}>
@@ -737,13 +738,13 @@ export default function Sidebar({ isOpen, onToggle }) {
                                 {activeSettingView === "profile" ? (
                                     <div style={{ display: "grid", gap: 10 }}>
                                         <div style={{ display: "flex", justifyContent: "center", margin: "10px 0" }}>
-                                            <div style={{ width: 64, height: 64, borderRadius: 32, background: "linear-gradient(135deg, #003A70, #7BAFD4)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 24, fontWeight: 600 }}>
+                                            <div style={{ width: 64, height: 64, borderRadius: 32, background: `linear-gradient(135deg, ${GS_BRAND.navy}, ${GS_BRAND.blueSoft})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 24, fontWeight: 600 }}>
                                                 JL
                                             </div>
                                         </div>
                                         <input style={inputStyle} defaultValue="Joao Lucas" placeholder="Full Name" />
                                         <input style={inputStyle} defaultValue="joao@example.com" placeholder="Email Address" type="email" />
-                                        <button onClick={() => { setActiveSettingView(null); alert("Profile saved!"); }} style={{ width: "100%", background: "#003A70", color: "#fff", border: "none", borderRadius: 10, padding: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 8 }}>Save Profile</button>
+                                        <button onClick={() => { setActiveSettingView(null); alert("Profile saved!"); }} style={{ width: "100%", background: GS_BRAND.navy, color: "#fff", border: "none", borderRadius: 10, padding: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 8 }}>Save Profile</button>
                                     </div>
                                 ) : activeSettingView === "security" ? (
                                     <div style={{ display: "grid", gap: 10 }}>
@@ -751,7 +752,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                                         <input style={inputStyle} placeholder="Current Password" type="password" />
                                         <input style={inputStyle} placeholder="New Password" type="password" />
                                         <input style={inputStyle} placeholder="Confirm New Password" type="password" />
-                                        <button onClick={() => { setActiveSettingView(null); alert("Password updated successfully!"); }} style={{ width: "100%", background: "#003A70", color: "#fff", border: "none", borderRadius: 10, padding: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 8 }}>Update Password</button>
+                                        <button onClick={() => { setActiveSettingView(null); alert("Password updated successfully!"); }} style={{ width: "100%", background: GS_BRAND.navy, color: "#fff", border: "none", borderRadius: 10, padding: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 8 }}>Update Password</button>
 
                                         <div style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 10, padding: 12, marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                             <div style={{ fontSize: 12, color: "#0A1628", fontWeight: 500 }}>Two-Factor Auth (2FA)</div>
@@ -827,7 +828,7 @@ export default function Sidebar({ isOpen, onToggle }) {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <div>
                                 <div style={{ fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7B8BA3" }}>Total Saved</div>
-                                <div style={{ fontSize: 18, fontWeight: 700, color: "#003A70", marginTop: 2 }}>${totalSaved.toLocaleString()}</div>
+                                <div style={{ fontSize: 18, fontWeight: 700, color: GS_BRAND.navy, marginTop: 2 }}>${totalSaved.toLocaleString()}</div>
                             </div>
                             <div style={{ textAlign: "right" }}>
                                 <div style={{ fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7B8BA3" }}>Avg Return</div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useT } from '../theme';
+import { useT, FONT_UI } from '../theme';
 import { loadProfile } from './AccountPanel'; // shared localStorage key
 
 export default function SettingsPanel({ open, onClose, theme, setTheme }) {
@@ -26,7 +26,7 @@ export default function SettingsPanel({ open, onClose, theme, setTheme }) {
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 300, zIndex: 100,
         background: T.panelBg, borderLeft: `1px solid ${T.border}`,
-        display: 'flex', flexDirection: 'column', fontFamily: "'Inter', system-ui, sans-serif",
+        display: 'flex', flexDirection: 'column', fontFamily: FONT_UI,
       }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Settings</span>
@@ -40,7 +40,7 @@ export default function SettingsPanel({ open, onClose, theme, setTheme }) {
             <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{
-                  width: 42, height: 42, borderRadius: '50%', background: '#003A70',
+                  width: 42, height: 42, borderRadius: '50%', background: T.brand,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 16, fontWeight: 700, color: '#fff', flexShrink: 0,
                 }}>{initials}</div>

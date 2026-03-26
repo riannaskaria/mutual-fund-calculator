@@ -2,6 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Goldman Sachs web fonts (public CDN; same stack as goldmansachs.com) */
+@font-face {
+  font-family: 'GS Sans';
+  src: url('https://cdn.gs.com/fonts/gs-sans/v3/gs-sans-variable.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GS Sans';
+  src: url('https://cdn.gs.com/fonts/gs-sans/v3/gs-sans-variable-italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GS Serif';
+  src: url('https://cdn.gs.com/fonts/gs-serif/v3/gs-serif-variable.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GS Serif';
+  src: url('https://cdn.gs.com/fonts/gs-serif/v3/gs-serif-variable-italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+body {
+  font-family: 'GS Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 /* Custom scrollbar for news panel and other panels */
 .news-scroll {
   scrollbar-width: thin;

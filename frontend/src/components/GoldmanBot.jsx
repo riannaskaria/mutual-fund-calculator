@@ -70,8 +70,8 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
         style={{
           position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
           width: 48, height: 48, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #003A70, #1d4ed8)',
-          border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,58,112,0.4)',
+          background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+          border: 'none', cursor: 'pointer', boxShadow: `0 4px 20px rgba(9, 44, 97, 0.35)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'transform 0.15s',
         }}
@@ -102,7 +102,7 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
           <div style={{
             padding: '12px 16px', borderBottom: `1px solid ${T.border}`,
             display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
-            background: 'linear-gradient(135deg, #003A70 0%, #1d4ed8 100%)',
+            background: `linear-gradient(135deg, ${T.brand} 0%, ${T.accent} 100%)`,
           }}>
             <div style={{
               width: 32, height: 32, borderRadius: '50%',
@@ -137,7 +137,7 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
                     color: T.textSub, cursor: 'pointer', textAlign: 'left',
                     transition: 'border-color 0.15s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = '#1d4ed8'}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = T.accent}
                   onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
                   >{s}</button>
                 ))}
@@ -148,7 +148,7 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
                 <div style={{
                   maxWidth: '82%', padding: '9px 13px',
                   borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                  background: m.role === 'user' ? '#1d4ed8' : T.cardBg,
+                  background: m.role === 'user' ? T.accent : T.cardBg,
                   border: m.role === 'user' ? 'none' : `1px solid ${T.border}`,
                   fontSize: 12.5, lineHeight: 1.55,
                   color: m.role === 'user' ? '#fff' : T.text,
@@ -167,7 +167,7 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
                 }}>
                   {[0, 0.15, 0.3].map((d, i) => (
                     <div key={i} style={{
-                      width: 6, height: 6, borderRadius: '50%', background: '#1d4ed8',
+                      width: 6, height: 6, borderRadius: '50%', background: T.accent,
                       animation: 'botPulse 1.1s ease-in-out infinite',
                       animationDelay: `${d}s`,
                     }} />
@@ -191,11 +191,11 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
                 outline: 'none', resize: 'none', fontFamily: 'inherit',
                 lineHeight: 1.4, transition: 'border-color 0.15s',
               }}
-              onFocus={e => e.target.style.borderColor = '#1d4ed8'}
+              onFocus={e => e.target.style.borderColor = T.accent}
               onBlur={e => e.target.style.borderColor = T.border}
             />
             <button onClick={() => sendMessage(input)} disabled={!input.trim() || thinking} style={{
-              background: input.trim() && !thinking ? '#1d4ed8' : T.inputBg,
+              background: input.trim() && !thinking ? T.accent : T.inputBg,
               border: 'none', borderRadius: 8, padding: '0 14px',
               cursor: input.trim() && !thinking ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center',

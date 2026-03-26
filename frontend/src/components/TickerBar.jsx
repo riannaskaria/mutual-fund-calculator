@@ -10,7 +10,7 @@ function TickerItem({ t }) {
         {t.price != null ? t.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
       </span>
       {t.chg != null && (
-        <span style={{ fontSize: 11, color: t.up ? '#22c55e' : '#ef4444', fontWeight: 500 }}>
+        <span style={{ fontSize: 11, color: t.up ? T.positive : T.negative, fontWeight: 500 }}>
           {t.up ? '+' : ''}{t.chg.toFixed(2)} ({t.up ? '+' : ''}{t.pct.toFixed(2)}%)
         </span>
       )}

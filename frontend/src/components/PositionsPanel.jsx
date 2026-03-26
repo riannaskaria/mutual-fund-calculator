@@ -103,7 +103,7 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect }) {
             <div key={fund.id ?? ticker} onClick={() => onSelect(globalIdx)}
               style={{
                 padding: '9px 14px', borderBottom: `1px solid ${T.border2}`, cursor: 'pointer',
-                background: isSelected ? 'rgba(0,58,112,0.25)' : 'transparent',
+                background: isSelected ? 'rgba(9, 44, 97, 0.12)' : 'transparent',
                 transition: 'background 0.12s', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}
               onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.hover; }}
@@ -121,7 +121,7 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect }) {
                   {price != null ? price.toFixed(2) : '—'}
                 </div>
                 {changePct != null ? (
-                  <div style={{ fontSize: 10, color: up ? '#22c55e' : '#ef4444' }}>
+                  <div style={{ fontSize: 10, color: up ? T.positive : T.negative }}>
                     {up ? '+' : ''}{changePct.toFixed(2)}%
                   </div>
                 ) : (
@@ -133,7 +133,7 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect }) {
         })}
         {visibleCount < filtered.length && (
           <div style={{ padding: '10px 14px', textAlign: 'center' }}>
-            <div style={{ width: 14, height: 14, border: `2px solid ${T.border}`, borderTopColor: '#22c55e', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+            <div style={{ width: 14, height: 14, border: `2px solid ${T.spinnerTrack}`, borderTopColor: T.spinnerAccent, borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
           </div>
         )}
       </div>
