@@ -51,7 +51,7 @@ export default function TickerBar() {
     : MARKET_INDICES.map(m => ({ sym: m.sym, price: null, chg: null, pct: null, up: true }));
 
   return (
-    <div style={{ background: T.pageBg, borderBottom: `1px solid ${T.border}`, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+    <div style={{ background: T.panelBg, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${T.border}`, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
       <div style={{ display: 'flex', animation: 'tickerScroll 40s linear infinite', width: 'max-content' }}>
         {[...items, ...items].map((t, i) => <TickerItem key={i} t={t} />)}
       </div>
