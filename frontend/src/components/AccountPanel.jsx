@@ -108,7 +108,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     const [editingProfile, setEditingProfile] = useState(false);
     const [draftName, setDraftName] = useState('');
     const [draftEmail, setDraftEmail] = useState('');
-    const [activeTab, setActiveTab] = useState('Portfolio');
+    const [activeTab, setActiveTab] = useState('Profile');
     const [addTicker, setAddTicker] = useState('');
     const [addAmount, setAddAmount] = useState('');
     const [addNote, setAddNote] = useState('');
@@ -220,7 +220,10 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
             >
                 <div style={{
                     width: 480, maxWidth: '100vw', height: '100%',
-                    background: T.panelBg, borderLeft: `1px solid ${T.border}`,
+                    background: T.glassPanel || T.panelBg,
+                    borderLeft: `1px solid ${T.glassBorder || T.border}`,
+                    backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+                    boxShadow: T.glassShadow,
                     display: 'flex', flexDirection: 'column',
                     animation: 'slideInRight 0.22s ease',
                     overflowY: 'auto',
@@ -237,64 +240,108 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                         }}>×</button>
                     </div>
 
-                    {/* profile card */}
-                    <div style={{ padding: '14px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
-                        <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '14px 16px' }}>
-                            {!editingProfile ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    <div style={{
-                                        width: 42, height: 42, borderRadius: '50%', background: T.brand,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0,
-                                    }}>{initials}</div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>
-                                            {profile.name || <span style={{ color: T.textMute, fontStyle: 'italic' }}>No name set</span>}
-                                        </div>
-                                        <div style={{ fontSize: 11, color: T.textMute }}>
-                                            {profile.email || <span style={{ fontStyle: 'italic' }}>No email set</span>}
-                                        </div>
-                                    </div>
-                                    <button onClick={startEditProfile} style={{
-                                        background: 'none', border: `1px solid ${T.border}`, borderRadius: 6,
-                                        padding: '5px 12px', fontSize: 11, color: T.textSub, cursor: 'pointer',
-                                    }}>Edit</button>
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                    <input type="text" placeholder="Full name" value={draftName} onChange={e => setDraftName(e.target.value)} style={inputStyle} autoFocus />
-                                    <input type="email" placeholder="Email address" value={draftEmail} onChange={e => setDraftEmail(e.target.value)} style={inputStyle} />
-                                    <div style={{ display: 'flex', gap: 8 }}>
-                                        <button onClick={saveProfileEdit} style={{
-                                            background: T.accent, color: '#fff', border: 'none', borderRadius: 7,
-                                            padding: '7px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                        }}>Save</button>
-                                        <button onClick={() => setEditingProfile(false)} style={{
-                                            background: 'none', border: `1px solid ${T.border}`, borderRadius: 7,
-                                            padding: '7px 14px', fontSize: 12, color: T.textMute, cursor: 'pointer',
-                                        }}>Cancel</button>
-                                    </div>
-                                </div>
-                            )}
+                    {/* compact avatar header */}
+                    <div style={{ padding: '12px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                            width: 38, height: 38, borderRadius: '50%',
+                            background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0,
+                        }}>{initials}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {profile.name || <span style={{ color: T.textMute, fontStyle: 'italic', fontWeight: 400 }}>Set your name</span>}
+                            </div>
+                            <div style={{ fontSize: 11, color: T.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {profile.email || <span style={{ fontStyle: 'italic' }}>No email set</span>}
+                            </div>
                         </div>
-                    </div>
-
-                    {/* summary stats */}
-                    <div style={{ padding: '14px 20px', borderBottom: `1px solid ${T.border}`, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, flexShrink: 0 }}>
-                        <StatCard label="Total Invested" value={fmt$(grandTotal)} accent={T.positive} />
-                        <StatCard label="Positions" value={positionTotals.length} sub="unique funds" />
-                        <StatCard label="Favorites" value={favSet.size} sub="saved funds" />
                     </div>
 
                     {/* tabs */}
                     <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0, padding: '0 8px' }}>
-                        {['Portfolio', 'Favorites', 'History'].map(t => (
+                        {['Profile', 'Portfolio', 'Favorites', 'History'].map(t => (
                             <button key={t} onClick={() => setActiveTab(t)} style={tabBtn(t)}>{t}</button>
                         ))}
                     </div>
 
                     {/* tab content */}
                     <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                        {/* ── PROFILE TAB ── */}
+                        {activeTab === 'Profile' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                                {/* Avatar + name display */}
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '10px 0 4px' }}>
+                                    <div style={{
+                                        width: 72, height: 72, borderRadius: '50%',
+                                        background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 26, fontWeight: 700, color: '#fff',
+                                    }}>{initials}</div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>
+                                            {profile.name || <span style={{ color: T.textMute, fontStyle: 'italic', fontWeight: 400 }}>No name set</span>}
+                                        </div>
+                                        {profile.email && <div style={{ fontSize: 12, color: T.textMute, marginTop: 2 }}>{profile.email}</div>}
+                                    </div>
+                                </div>
+
+                                {/* Edit form */}
+                                <div>
+                                    <SectionHeading>Personal Information</SectionHeading>
+                                    {!editingProfile ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                            {[
+                                                { label: 'Full Name', value: profile.name || '—' },
+                                                { label: 'Email Address', value: profile.email || '—' },
+                                            ].map(({ label, value }) => (
+                                                <div key={label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '10px 14px' }}>
+                                                    <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, marginBottom: 4 }}>{label}</div>
+                                                    <div style={{ fontSize: 13, color: value === '—' ? T.textFaint : T.text, fontStyle: value === '—' ? 'italic' : 'normal' }}>{value}</div>
+                                                </div>
+                                            ))}
+                                            <button onClick={startEditProfile} style={{
+                                                alignSelf: 'flex-start', background: T.accent, color: '#fff',
+                                                border: 'none', borderRadius: 7, padding: '8px 20px',
+                                                fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 4,
+                                            }}>Edit Profile</button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                            <div>
+                                                <label style={{ fontSize: 10, color: T.textMute, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>Full Name</label>
+                                                <input type="text" placeholder="e.g. Jane Smith" value={draftName} onChange={e => setDraftName(e.target.value)} style={inputStyle} autoFocus />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: 10, color: T.textMute, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>Email Address</label>
+                                                <input type="email" placeholder="e.g. jane@example.com" value={draftEmail} onChange={e => setDraftEmail(e.target.value)} style={inputStyle} />
+                                            </div>
+                                            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                                                <button onClick={saveProfileEdit} style={{
+                                                    background: T.accent, color: '#fff', border: 'none', borderRadius: 7,
+                                                    padding: '8px 20px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                                }}>Save Changes</button>
+                                                <button onClick={() => setEditingProfile(false)} style={{
+                                                    background: 'none', border: `1px solid ${T.border}`, borderRadius: 7,
+                                                    padding: '8px 14px', fontSize: 12, color: T.textMute, cursor: 'pointer',
+                                                }}>Cancel</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Summary stats */}
+                                <div>
+                                    <SectionHeading>Portfolio Summary</SectionHeading>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                                        <StatCard label="Invested" value={fmt$(grandTotal)} accent={T.positive} />
+                                        <StatCard label="Positions" value={positionTotals.length} sub="funds" />
+                                        <StatCard label="Favorites" value={favSet.size} sub="saved" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* ── PORTFOLIO TAB ── */}
                         {activeTab === 'Portfolio' && (

@@ -9,7 +9,7 @@ export default function FundHeader({ ticker, fundName, quote, quoteLoading }) {
   const up    = chg != null ? chg >= 0 : true;
 
   return (
-    <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, background: T.pageBg }}>
+    <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, background: T.panelBg, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
       {quoteLoading ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 56 }}>
           <div style={{ width: 14, height: 14, border: `2px solid ${T.spinnerTrack}`, borderTopColor: T.spinnerAccent, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -40,7 +40,14 @@ export default function FundHeader({ ticker, fundName, quote, quoteLoading }) {
                 </span>
               )}
             </div>
-            <div style={{ fontSize: 13, color: T.textMute, fontWeight: 500, marginTop: 1 }}>{quote?.symbol || ticker}</div>
+            <div style={{ fontSize: 12, color: T.textMute, fontWeight: 500, marginTop: 1 }}>
+              {quote?.symbol || ticker}
+              {quote?.regularMarketTime && (
+                <span style={{ marginLeft: 8, fontSize: 10, color: T.textFaint }}>
+                  · NAV as of {new Date(quote.regularMarketTime * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </div>
           </div>
 
           <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>

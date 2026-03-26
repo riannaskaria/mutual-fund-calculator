@@ -49,7 +49,7 @@ function getDomain(source) {
   return SOURCE_BRANDS[source]?.domain || source.toLowerCase().replace(/[^a-z]/g, '') + '.com';
 }
 
-export default function NewsPanel({ onArticlesUpdate }) {
+export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggle }) {
   const T = useT();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -113,6 +113,30 @@ export default function NewsPanel({ onArticlesUpdate }) {
     setSearchTimeout(setTimeout(() => fetchNews(val.trim()), 500));
   };
 
+  if (collapsed) {
+    return (
+      <div
+        onClick={onToggle}
+        title="Show news"
+        style={{
+          width: 28, background: T.newsItemBg, borderLeft: `1px solid ${T.border}`,
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          paddingTop: 14, gap: 10, flexShrink: 0, cursor: 'pointer',
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = T.hover}
+        onMouseLeave={e => e.currentTarget.style.background = T.newsItemBg}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span style={{ fontSize: 9, color: T.textMute, writingMode: 'vertical-rl', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
+          News{articles.length > 0 ? ` · ${articles.length}` : ''}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: 288, background: T.newsItemBg, borderLeft: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
       {/* Header */}
@@ -126,6 +150,15 @@ export default function NewsPanel({ onArticlesUpdate }) {
             </span>
           )}
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <button onClick={onToggle} title="Hide news"
+          style={{ background: 'none', border: `1px solid ${T.border2}`, borderRadius: 5, cursor: 'pointer', padding: '4px 5px', display: 'flex', alignItems: 'center' }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = T.borderSub}
+          onMouseLeave={e => e.currentTarget.style.borderColor = T.border2}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
         <button onClick={() => fetchNews(query, true)}
           style={{ background: 'none', border: '1px solid #141f2e', borderRadius: 5, cursor: 'pointer', padding: '4px 5px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 0.15s' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#2a3a50'}
@@ -136,6 +169,7 @@ export default function NewsPanel({ onArticlesUpdate }) {
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
           </svg>
         </button>
+        </div>
       </div>
 
       {/* Search */}

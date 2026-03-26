@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { THEMES, ThemeCtx, CAPM_SUPPORTED, getFundTicker, getFundBaseName, FONT_UI, GS_BRAND } from '../theme';
+import { THEMES, ThemeCtx, CAPM_SUPPORTED, getFundTicker, getFundBaseName, FONT_UI } from '../theme';
 import { fetchFutureValue, fetchYahooQuote } from '../api/mutualFundApi';
 
 import TickerBar from './TickerBar';
@@ -11,14 +11,16 @@ import GoldmanBot from './GoldmanBot';
 import SettingsPanel from './SettingsPanel';
 import AccountPanel from './AccountPanel';
 
-const GS_LOGO_SRC = 'https://cdn.gs.com/images/goldman-sachs/v1/gs-favicon.svg';
+const GS_LOGO_SRC = 'https://companieslogo.com/img/orig/GS.D-55ee2e2e.png?t=1740321324';
 
 function TopBar({ onSettings, onAccount }) {
   const iconStroke = 'rgba(255,255,255,0.88)';
   return (
     <header style={{
-      background: GS_BRAND.blueSoft,
-      borderBottom: '1px solid rgba(0,0,0,0.18)',
+      background: 'linear-gradient(90deg, #092C61 0%, #7399C6 100%)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderBottom: '1px solid rgba(255,255,255,0.12)',
       padding: '10px 18px',
       display: 'flex',
       alignItems: 'center',
@@ -104,11 +106,26 @@ export default function TradingDashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [newsArticles, setNewsArticles] = useState([]);
+  const [calcHistory, setCalcHistory] = useState([]);
+  const [lastRefresh, setLastRefresh] = useState(null);
+  const [newsOpen, setNewsOpen] = useState(true);
+  const [customTickers, setCustomTickers] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mf_custom_tickers') || '[]'); }
+    catch { return []; }
+  });
   const T = THEMES[theme];
 
-  // Load all CAPM-supported funds from Yahoo Finance
   useEffect(() => {
-    const tickers = [...CAPM_SUPPORTED];
+    localStorage.setItem('mf_custom_tickers', JSON.stringify(customTickers));
+  }, [customTickers]);
+
+  // Fetch all fund prices (called on mount + every 15s)
+  const fetchAllPrices = useCallback(() => {
+    const stored = (() => {
+      try { return JSON.parse(localStorage.getItem('mf_custom_tickers') || '[]'); } catch { return []; }
+    })();
+    const extra = stored.filter(t => !CAPM_SUPPORTED.has(t));
+    const tickers = [...CAPM_SUPPORTED, ...extra];
     Promise.all(
       tickers.map(sym =>
         fetch(`/yahoo-api/v8/finance/chart/${sym}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) })
@@ -120,15 +137,50 @@ export default function TradingDashboard() {
             const prev = meta.chartPreviousClose ?? null;
             const change = price != null && prev != null ? price - prev : null;
             const changePct = change != null && prev ? (change / prev) * 100 : null;
-            return { id: meta.symbol, name: meta.longName || meta.shortName || meta.symbol, ticker: meta.symbol, price, change, changePct };
+            return { id: meta.symbol, name: meta.longName || meta.shortName || meta.symbol, ticker: meta.symbol, price, change, changePct, custom: extra.includes(sym) };
           })
           .catch(() => null)
       )
     ).then(results => {
-      setFunds(results.filter(Boolean));
+      const valid = results.filter(Boolean);
+      setFunds(valid);
       setLoading(false);
+      setLastRefresh(new Date());
     });
   }, []);
+
+  const handleAddCustomFund = useCallback(async (sym) => {
+    const t = sym.trim().toUpperCase();
+    if (!t) return;
+    const stored = (() => {
+      try { return JSON.parse(localStorage.getItem('mf_custom_tickers') || '[]'); } catch { return []; }
+    })();
+    if (CAPM_SUPPORTED.has(t) || stored.includes(t)) return;
+    const j = await fetch(`/yahoo-api/v8/finance/chart/${t}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) }).then(r => r.json());
+    const meta = j?.chart?.result?.[0]?.meta;
+    if (!meta?.symbol) throw new Error(`"${t}" not found on Yahoo Finance`);
+    setCustomTickers(prev => {
+      const next = [...prev.filter(x => x !== t), t];
+      localStorage.setItem('mf_custom_tickers', JSON.stringify(next));
+      return next;
+    });
+    fetchAllPrices();
+  }, [fetchAllPrices]);
+
+  const handleRemoveCustomFund = useCallback((sym) => {
+    setCustomTickers(prev => {
+      const next = prev.filter(t => t !== sym);
+      localStorage.setItem('mf_custom_tickers', JSON.stringify(next));
+      return next;
+    });
+    setFunds(prev => prev.filter(f => f.id !== sym));
+  }, []);
+
+  useEffect(() => {
+    fetchAllPrices();
+    const iv = setInterval(fetchAllPrices, 15000);
+    return () => clearInterval(iv);
+  }, [fetchAllPrices]);
 
   // Fetch quote whenever selected fund changes
   useEffect(() => {
@@ -142,6 +194,14 @@ export default function TradingDashboard() {
       .finally(() => setQuoteLoading(false));
   }, [funds, selectedIdx]);
 
+  const saveResult = useCallback((fund, amount, yearsNum, result) => {
+    setFutureValue(result);
+    setCalcHistory(prev => {
+      const filtered = prev.filter(h => h.ticker !== fund.id);
+      return [{ ticker: fund.id, name: getFundBaseName(fund), amount, years: yearsNum, result }, ...filtered].slice(0, 10);
+    });
+  }, []);
+
   const handleCalculate = useCallback(async () => {
     const fund = funds[selectedIdx];
     if (!fund) return;
@@ -151,13 +211,41 @@ export default function TradingDashboard() {
     setCalculating(true);
     try {
       const result = await fetchFutureValue(fund.id, amount, yearsNum);
-      setFutureValue(result);
-    } catch (err) {
-      console.error(err);
+      saveResult(fund, amount, yearsNum, result);
+    } catch {
+      // Client-side CAPM fallback when backend is unavailable
+      try {
+        const hist = await fetch(`/yahoo-api/v8/finance/chart/${fund.id}?interval=1mo&range=1y`)
+          .then(r => r.json());
+        const closes = hist?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean) ?? [];
+        let expectedReturn = 0.08;
+        if (closes.length >= 2) {
+          expectedReturn = (closes[closes.length - 1] - closes[0]) / closes[0];
+        }
+        const rf = 0.0425;
+        const beta = 1.0;
+        const capmRate = rf + beta * (expectedReturn - rf);
+        saveResult(fund, amount, yearsNum, {
+          futureValue: amount * Math.exp(capmRate * yearsNum),
+          beta,
+          capmRate,
+          riskFreeRate: rf,
+          expectedReturnRate: expectedReturn,
+        });
+      } catch {
+        const capmRate = 0.08;
+        saveResult(fund, amount, yearsNum, {
+          futureValue: amount * Math.exp(capmRate * yearsNum),
+          beta: 1.0,
+          capmRate,
+          riskFreeRate: 0.0425,
+          expectedReturnRate: 0.08,
+        });
+      }
     } finally {
       setCalculating(false);
     }
-  }, [funds, selectedIdx, investmentAmount, years]);
+  }, [funds, selectedIdx, investmentAmount, years, saveResult]);
 
   if (loading) {
     return (
@@ -181,7 +269,22 @@ export default function TradingDashboard() {
           <PositionsPanel
             funds={funds}
             selectedIdx={selectedIdx}
-            onSelect={idx => { setSelectedIdx(idx); setFutureValue(null); }}
+            lastRefresh={lastRefresh}
+            customTickers={customTickers}
+            onAddFund={handleAddCustomFund}
+            onRemoveFund={handleRemoveCustomFund}
+            onSelect={idx => {
+              setSelectedIdx(idx);
+              const fund = funds[idx];
+              const prev = fund ? calcHistory.find(h => h.ticker === fund.id) : null;
+              if (prev) {
+                setFutureValue(prev.result);
+                setInvestmentAmount(String(prev.amount));
+                setYears(String(prev.years));
+              } else {
+                setFutureValue(null);
+              }
+            }}
           />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <FundHeader
@@ -200,9 +303,10 @@ export default function TradingDashboard() {
               onCalculate={handleCalculate}
               setInvestmentAmount={setInvestmentAmount}
               setYears={setYears}
+              calcHistory={calcHistory}
             />
           </div>
-          <NewsPanel onArticlesUpdate={setNewsArticles} />
+          <NewsPanel onArticlesUpdate={setNewsArticles} collapsed={!newsOpen} onToggle={() => setNewsOpen(v => !v)} />
         </div>
         <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} theme={theme} setTheme={setTheme} />
         <GoldmanBot funds={funds} quote={quote} articles={newsArticles} selectedFund={selectedFund} />

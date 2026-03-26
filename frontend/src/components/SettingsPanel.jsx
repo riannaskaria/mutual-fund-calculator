@@ -25,7 +25,9 @@ export default function SettingsPanel({ open, onClose, theme, setTheme }) {
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 99, background: 'rgba(0,0,0,0.45)' }} />
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 300, zIndex: 100,
-        background: T.panelBg, borderLeft: `1px solid ${T.border}`,
+        background: T.glassPanel, borderLeft: `1px solid ${T.glassBorder || T.border}`,
+        backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+        boxShadow: T.glassShadow,
         display: 'flex', flexDirection: 'column', fontFamily: FONT_UI,
       }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -59,26 +61,36 @@ export default function SettingsPanel({ open, onClose, theme, setTheme }) {
           {/* Appearance */}
           <div>
             <div style={{ fontSize: 10, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Appearance</div>
-            <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '16px' }}>
+            <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 14, padding: '16px', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
               <div style={{ fontSize: 11, color: T.textSub, marginBottom: 12 }}>Color Theme</div>
-              <div style={{ display: 'flex', background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: 3, position: 'relative' }}>
-                <div style={{
-                  position: 'absolute', top: 3, bottom: 3,
-                  left: theme === 'dark' ? 3 : 'calc(50% + 1.5px)',
-                  width: 'calc(50% - 4.5px)',
-                  background: T.panelBg, borderRadius: 6,
-                  border: `1px solid ${T.border}`,
-                  transition: 'left 0.2s cubic-bezier(0.4,0,0.2,1)',
-                  pointerEvents: 'none',
-                }} />
-                {[{ id: 'dark', label: 'Dark' }, { id: 'light', label: 'Light' }].map(opt => (
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[
+                  { id: 'light', label: '☀ Light', bg: '#F7F7FA', fg: '#0d1520' },
+                  { id: 'dark',  label: '◑ Dark',  bg: '#1e1e1e', fg: '#f0f2f4' },
+                  { id: 'black', label: '● Black', bg: '#000000', fg: '#f2f2f7' },
+                ].map(opt => (
                   <button key={opt.id} onClick={() => setTheme(opt.id)} style={{
-                    flex: 1, background: 'none', border: 'none', borderRadius: 6,
-                    padding: '7px 0', cursor: 'pointer', position: 'relative', zIndex: 1,
-                    fontSize: 12, fontWeight: theme === opt.id ? 600 : 400,
-                    color: theme === opt.id ? T.text : T.textMute,
-                    transition: 'color 0.2s',
-                  }}>{opt.label}</button>
+                    flex: 1,
+                    background: theme === opt.id ? opt.bg : T.inputBg,
+                    border: theme === opt.id ? `2px solid ${T.accent}` : `1px solid ${T.border}`,
+                    borderRadius: 10,
+                    padding: '10px 6px',
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    fontWeight: theme === opt.id ? 700 : 400,
+                    color: theme === opt.id ? opt.fg : T.textMute,
+                    transition: 'all 0.18s',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  }}>
+                    <span style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: opt.bg,
+                      border: `2px solid ${theme === opt.id ? T.accent : T.border}`,
+                      display: 'block',
+                      boxShadow: theme === opt.id ? `0 0 0 3px ${T.accent}22` : 'none',
+                    }} />
+                    {opt.label.split(' ')[1]}
+                  </button>
                 ))}
               </div>
             </div>
