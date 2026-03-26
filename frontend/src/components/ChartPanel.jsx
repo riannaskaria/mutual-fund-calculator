@@ -10,10 +10,10 @@ import { getFundInformationRows } from '../data/fundInformation';
 const TABS = ['Price Chart', 'CAPM Calculator', 'Information'];
 
 const PRICE_RANGES = [
-  { label: '1W', range: '7d',  interval: '1h' },
+  { label: '1W', range: '7d', interval: '1h' },
   { label: '1M', range: '1mo', interval: '1d' },
   { label: '3M', range: '3mo', interval: '1d' },
-  { label: '1Y', range: '1y',  interval: '1d' },
+  { label: '1Y', range: '1y', interval: '1d' },
 ];
 
 function fmtMoney(v) {
@@ -68,7 +68,7 @@ function PriceChart({ ticker, quote }) {
 
   const footerStats = [
     { label: '52W High *', value: quote?.fiftyTwoWeekHigh?.toFixed(2) || '—' },
-    { label: '52W Low *',  value: quote?.fiftyTwoWeekLow?.toFixed(2)  || '—' },
+    { label: '52W Low *', value: quote?.fiftyTwoWeekLow?.toFixed(2) || '—' },
   ];
 
   return (
@@ -96,7 +96,7 @@ function PriceChart({ ticker, quote }) {
           <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 8 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor={color} stopOpacity={0.2} />
+                <stop offset="5%" stopColor={color} stopOpacity={0.2} />
                 <stop offset="95%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
@@ -239,17 +239,6 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
             onBlur={e => e.target.style.borderColor = T.border}
           />
         </div>
-        <button onClick={onCalculate} disabled={calculating} style={{
-          background: calculating ? T.inputBg : T.accent,
-          color: calculating ? T.textMute : '#ffffff',
-          border: `1px solid ${calculating ? T.border : T.accent}`,
-          borderRadius: 9999, padding: '9px 22px',
-          fontSize: 13, fontWeight: 600, cursor: calculating ? 'not-allowed' : 'pointer',
-          display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.15s',
-        }}>
-          {calculating && <div style={{ width: 11, height: 11, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />}
-          {calculating ? 'Calculating…' : 'Calculate'}
-        </button>
       </div>
 
 
@@ -372,11 +361,11 @@ function FundInformationTab({ ticker }) {
   ]));
 
   const quickKeys = ['Benchmark', 'Category', 'Expense Ratio', 'Inception'];
-  const longKeys  = ['Investment Objective', 'Strategy & Approach', 'Risk Considerations', 'Notes'];
+  const longKeys = ['Investment Objective', 'Strategy & Approach', 'Risk Considerations', 'Notes'];
 
   const quickFacts = quickKeys.map(k => byKey[k]).filter(Boolean);
-  const longItems  = longKeys.map(k => byKey[k]).filter(Boolean);
-  const hasAny     = rows.some(r => !r.isPlaceholder);
+  const longItems = longKeys.map(k => byKey[k]).filter(Boolean);
+  const hasAny = rows.some(r => !r.isPlaceholder);
 
   if (!hasAny) {
     return (
@@ -451,8 +440,8 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
               cursor: 'pointer', transition: 'all 0.18s',
               whiteSpace: 'nowrap',
             }}
-            onMouseEnter={e => { if (activeTab !== tab) e.currentTarget.style.background = T.hover; }}
-            onMouseLeave={e => { if (activeTab !== tab) e.currentTarget.style.background = 'transparent'; }}
+              onMouseEnter={e => { if (activeTab !== tab) e.currentTarget.style.background = T.hover; }}
+              onMouseLeave={e => { if (activeTab !== tab) e.currentTarget.style.background = 'transparent'; }}
             >{tab}</button>
           </div>
         ))}
