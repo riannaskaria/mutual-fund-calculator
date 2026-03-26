@@ -7,8 +7,9 @@ import {
 } from 'recharts';
 import { useT } from '../theme';
 import { fetchYahooPriceHistory } from '../api/mutualFundApi';
+import { getFundInformationRows } from '../data/fundInformation';
 
-const TABS = ['Price Chart', 'CAPM Calculator'];
+const TABS = ['Price Chart', 'CAPM Calculator', 'Information'];
 
 const PRICE_RANGES = [
   { label: '1W', range: '7d',  interval: '1h' },
@@ -142,6 +143,47 @@ function PriceChart({ ticker, quote }) {
   );
 }
 
+function FundInformationTab({ ticker }) {
+  const T = useT();
+  const rows = getFundInformationRows(ticker);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 720 }}>
+      <p style={{ fontSize: 12, color: T.textMute, margin: 0, lineHeight: 1.5 }}>
+        Fund-specific notes are maintained in <code style={{ fontSize: 11, color: T.textSub }}>src/data/fundInformation.js</code>
+        {' '}(keyed by ticker). Markets and prospectus details change — verify material facts independently.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {rows.map(({ label, value, isPlaceholder }) => (
+          <div
+            key={label}
+            style={{
+              background: T.cardBg,
+              border: `1px solid ${T.border}`,
+              borderRadius: 8,
+              padding: '12px 14px',
+            }}
+          >
+            <div style={{
+              fontSize: 10,
+              color: T.textMute,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              fontWeight: 600,
+              marginBottom: 6,
+            }}>{label}</div>
+            <div style={{
+              fontSize: 13,
+              color: isPlaceholder ? T.textFaint : T.text,
+              lineHeight: 1.5,
+              fontStyle: isPlaceholder ? 'italic' : 'normal',
+            }}>{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ChartPanel({ ticker, quote, investmentAmount, years, futureValue, calculating, onCalculate, setInvestmentAmount, setYears }) {
   const T = useT();
   const [activeTab, setActiveTab] = useState('Price Chart');
@@ -245,6 +287,8 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
             </div>
           );
         })()}
+
+        {activeTab === 'Information' && <FundInformationTab ticker={ticker} />}
       </div>
     </div>
   );
