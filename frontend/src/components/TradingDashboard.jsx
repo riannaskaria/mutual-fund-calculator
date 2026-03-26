@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { THEMES, ThemeCtx, CAPM_SUPPORTED, getFundTicker, getFundBaseName } from '../theme';
+import { THEMES, ThemeCtx, CAPM_SUPPORTED, getFundTicker, getFundBaseName, FONT_UI, GS_BRAND } from '../theme';
 import { fetchFutureValue, fetchYahooQuote } from '../api/mutualFundApi';
 
 import TickerBar from './TickerBar';
@@ -11,38 +11,82 @@ import GoldmanBot from './GoldmanBot';
 import SettingsPanel from './SettingsPanel';
 import AccountPanel from './AccountPanel';
 
+const GS_LOGO_SRC = 'https://cdn.gs.com/images/goldman-sachs/v1/gs-favicon.svg';
+
 function TopBar({ onSettings, onAccount }) {
+  const iconStroke = 'rgba(255,255,255,0.88)';
   return (
-    <ThemeCtx.Consumer>{T => (
-      <div style={{
-        background: T.panelBg, borderBottom: `1px solid ${T.border}`,
-        padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #003A70, #22c55e)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 10, color: '#fff', fontWeight: 800,
-          }}>MF</div>
-          <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Fund Dashboard</span>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <button onClick={onAccount} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', borderRadius: 4 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          </button>
-          <button onClick={onSettings} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', borderRadius: 4 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textSub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </button>
-        </div>
+    <header style={{
+      background: GS_BRAND.blueSoft,
+      borderBottom: '1px solid rgba(0,0,0,0.18)',
+      padding: '10px 18px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 16,
+      flexShrink: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <img
+          src={GS_LOGO_SRC}
+          alt="Goldman Sachs"
+          width={28}
+          height={28}
+          draggable={false}
+          style={{ display: 'block', flexShrink: 0 }}
+        />
+        <span style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: '#fff',
+          letterSpacing: '0.01em',
+          whiteSpace: 'nowrap',
+        }}>Fund Dashboard</span>
       </div>
-    )}</ThemeCtx.Consumer>
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button
+          type="button"
+          onClick={onAccount}
+          title="Account"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 8,
+            display: 'flex',
+            alignItems: 'center',
+            borderRadius: 6,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={iconStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={onSettings}
+          title="Settings"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 8,
+            display: 'flex',
+            alignItems: 'center',
+            borderRadius: 6,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={iconStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      </div>
+    </header>
   );
 }
 
@@ -130,7 +174,7 @@ export default function TradingDashboard() {
 
   return (
     <ThemeCtx.Provider value={T}>
-      <div style={{ height: '100vh', background: T.pageBg, display: 'flex', flexDirection: 'column', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
+      <div style={{ height: '100vh', background: T.pageBg, display: 'flex', flexDirection: 'column', fontFamily: FONT_UI, overflow: 'hidden' }}>
         <TickerBar />
         <TopBar onSettings={() => setSettingsOpen(true)} onAccount={() => setAccountOpen(true)} />
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>

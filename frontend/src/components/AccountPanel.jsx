@@ -200,7 +200,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
 
     const tabBtn = (name) => ({
         background: 'none', border: 'none',
-        borderBottom: activeTab === name ? '2px solid #22c55e' : '2px solid transparent',
+        borderBottom: activeTab === name ? `2px solid ${T.accent}` : '2px solid transparent',
         padding: '10px 14px', fontSize: 12,
         fontWeight: activeTab === name ? 600 : 400,
         color: activeTab === name ? T.text : T.textMute,
@@ -243,7 +243,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                             {!editingProfile ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <div style={{
-                                        width: 42, height: 42, borderRadius: '50%', background: '#003A70',
+                                        width: 42, height: 42, borderRadius: '50%', background: T.brand,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0,
                                     }}>{initials}</div>
@@ -266,7 +266,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                     <input type="email" placeholder="Email address" value={draftEmail} onChange={e => setDraftEmail(e.target.value)} style={inputStyle} />
                                     <div style={{ display: 'flex', gap: 8 }}>
                                         <button onClick={saveProfileEdit} style={{
-                                            background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7,
+                                            background: T.accent, color: '#fff', border: 'none', borderRadius: 7,
                                             padding: '7px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
                                         }}>Save</button>
                                         <button onClick={() => setEditingProfile(false)} style={{
@@ -281,7 +281,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
 
                     {/* summary stats */}
                     <div style={{ padding: '14px 20px', borderBottom: `1px solid ${T.border}`, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, flexShrink: 0 }}>
-                        <StatCard label="Total Invested" value={fmt$(grandTotal)} accent="#22c55e" />
+                        <StatCard label="Total Invested" value={fmt$(grandTotal)} accent={T.positive} />
                         <StatCard label="Positions" value={positionTotals.length} sub="unique funds" />
                         <StatCard label="Favorites" value={favSet.size} sub="saved funds" />
                     </div>
@@ -327,7 +327,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                             disabled={!addTicker || !addAmount || parseFloat(addAmount) <= 0}
                                             style={{
                                                 alignSelf: 'flex-start',
-                                                background: (!addTicker || !addAmount || parseFloat(addAmount) <= 0) ? T.inputBg : '#1d4ed8',
+                                                background: (!addTicker || !addAmount || parseFloat(addAmount) <= 0) ? T.inputBg : T.accent,
                                                 color: (!addTicker || !addAmount || parseFloat(addAmount) <= 0) ? T.textMute : '#fff',
                                                 border: 'none', borderRadius: 7, padding: '9px 22px',
                                                 fontSize: 13, fontWeight: 600,
@@ -350,7 +350,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                     <div style={{
                                                         width: 30, height: 30, borderRadius: 6,
-                                                        background: 'linear-gradient(135deg, #003A70, #1d4ed8)',
+                                                        background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontSize: 9, color: '#fff', fontWeight: 700, flexShrink: 0,
                                                     }}>{ticker.slice(0, 3)}</div>
@@ -359,7 +359,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                         <div style={{ fontSize: 10, color: T.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fundName.split(';')[0]}</div>
                                                     </div>
                                                     <div style={{ textAlign: 'right' }}>
-                                                        <div style={{ fontSize: 14, fontWeight: 700, color: '#22c55e' }}>{fmt$(total)}</div>
+                                                        <div style={{ fontSize: 14, fontWeight: 700, color: T.positive }}>{fmt$(total)}</div>
                                                         <div style={{ fontSize: 10, color: T.textMute }}>{entries.length} {entries.length === 1 ? 'entry' : 'entries'}</div>
                                                     </div>
                                                     <button onClick={() => removePosition(ticker)} title="Remove position" style={{
@@ -402,7 +402,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                 }}>
                                                     <div style={{
                                                         width: 30, height: 30, borderRadius: 6,
-                                                        background: 'linear-gradient(135deg, #003A70, #22c55e)',
+                                                        background: `linear-gradient(135deg, ${T.brand}, ${T.positive})`,
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontSize: 9, color: '#fff', fontWeight: 700, flexShrink: 0,
                                                     }}>{ticker.slice(0, 3)}</div>
@@ -413,7 +413,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                     {f.price != null && (
                                                         <div style={{ textAlign: 'right', marginRight: 4 }}>
                                                             <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>${f.price.toFixed(2)}</div>
-                                                            <div style={{ fontSize: 10, color: isUp ? '#22c55e' : '#ef4444' }}>
+                                                            <div style={{ fontSize: 10, color: isUp ? T.positive : T.negative }}>
                                                                 {isUp ? '+' : ''}{(f.changePct ?? 0).toFixed(2)}%
                                                             </div>
                                                         </div>
@@ -446,7 +446,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                     <span style={{ fontSize: 12, fontWeight: 700, color: T.text, width: 60, flexShrink: 0 }}>{ticker}</span>
                                                     <span style={{ fontSize: 11, color: T.textMute, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(f.name || '').split(';')[0].substring(0, 35)}</span>
                                                     {f.price != null && (
-                                                        <span style={{ fontSize: 11, fontWeight: 600, color: isUp ? '#22c55e' : '#ef4444', flexShrink: 0 }}>
+                                                        <span style={{ fontSize: 11, fontWeight: 600, color: isUp ? T.positive : T.negative, flexShrink: 0 }}>
                                                             ${f.price.toFixed(2)}
                                                         </span>
                                                     )}
@@ -481,7 +481,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                         }}>
                                             <div style={{
                                                 width: 28, height: 28, borderRadius: 5,
-                                                background: 'linear-gradient(135deg, #003A70, #1d4ed8)',
+                                                background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 fontSize: 8, color: '#fff', fontWeight: 700, flexShrink: 0,
                                             }}>{h.ticker.slice(0, 3)}</div>
@@ -489,7 +489,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                 <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{h.ticker}</div>
                                                 <div style={{ fontSize: 10, color: T.textMute }}>{fmtDate(h.date)}{h.note ? ` · ${h.note}` : ''}</div>
                                             </div>
-                                            <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e', flexShrink: 0 }}>{fmt$(h.amount)}</div>
+                                            <div style={{ fontSize: 13, fontWeight: 700, color: T.positive, flexShrink: 0 }}>{fmt$(h.amount)}</div>
                                         </div>
                                     ))
                                 }
