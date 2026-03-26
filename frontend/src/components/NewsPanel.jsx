@@ -120,9 +120,9 @@ export default function NewsPanel({ onArticlesUpdate }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: T.text, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Market News</span>
           {lastUpdated && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '1px 6px' }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-              <span style={{ fontSize: 9, color: '#22c55e', fontWeight: 600, letterSpacing: '0.03em' }}>LIVE</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(24, 106, 222, 0.08)', border: '1px solid rgba(24, 106, 222, 0.22)', borderRadius: 10, padding: '1px 6px' }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: T.accent, display: 'inline-block' }} />
+              <span style={{ fontSize: 9, color: T.accent, fontWeight: 600, letterSpacing: '0.03em' }}>LIVE</span>
             </span>
           )}
         </div>
@@ -131,7 +131,7 @@ export default function NewsPanel({ onArticlesUpdate }) {
           onMouseEnter={e => e.currentTarget.style.borderColor = '#2a3a50'}
           onMouseLeave={e => e.currentTarget.style.borderColor = '#141f2e'}
           title="Refresh">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={loading ? '#22c55e' : '#446688'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={loading ? T.accent : T.accentSoft} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
           </svg>
@@ -161,7 +161,7 @@ export default function NewsPanel({ onArticlesUpdate }) {
       <div className="news-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {loading && articles.length === 0 && (
           <div style={{ padding: '40px 14px', textAlign: 'center' }}>
-            <div style={{ width: 20, height: 20, border: '2px solid #1a2535', borderTopColor: '#22c55e', borderRadius: '50%', margin: '0 auto 10px', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ width: 20, height: 20, border: `2px solid ${T.spinnerTrack}`, borderTopColor: T.spinnerAccent, borderRadius: '50%', margin: '0 auto 10px', animation: 'spin 0.8s linear infinite' }} />
             <div style={{ fontSize: 11, color: '#334455' }}>Fetching latest news…</div>
           </div>
         )}
@@ -183,7 +183,7 @@ export default function NewsPanel({ onArticlesUpdate }) {
                   <img src={`https://www.google.com/s2/favicons?domain=${getDomain(item.source)}&sz=16`}
                     width={11} height={11} alt="" style={{ borderRadius: 2, flexShrink: 0 }}
                     onError={e => { e.target.style.display = 'none'; }} />
-                  <span style={{ fontSize: 9, color: brand?.color || '#446688', fontWeight: 700, letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.source}</span>
+                  <span style={{ fontSize: 9, color: brand?.color || T.accentSoft, fontWeight: 700, letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.source}</span>
                   <span style={{ marginLeft: 'auto', fontSize: 8, color: '#2a3f55', whiteSpace: 'nowrap', flexShrink: 0 }}>{timeAgo(item.time)}</span>
                 </div>
                 <div style={{ fontSize: 11, color: T.textSub, lineHeight: 1.45, fontWeight: 400 }}>{item.title}</div>

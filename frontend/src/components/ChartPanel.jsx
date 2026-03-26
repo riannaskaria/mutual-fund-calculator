@@ -7,8 +7,9 @@ import {
 } from 'recharts';
 import { useT } from '../theme';
 import { fetchYahooPriceHistory } from '../api/mutualFundApi';
+import { getFundInformationRows } from '../data/fundInformation';
 
-const TABS = ['Price Chart', 'CAPM Calculator'];
+const TABS = ['Price Chart', 'CAPM Calculator', 'Information'];
 
 const PRICE_RANGES = [
   { label: '1W', range: '7d',  interval: '1h' },
@@ -50,7 +51,7 @@ function PriceChart({ ticker, quote }) {
   const { data, prevClose } = chartData;
   const lastPrice = data[data.length - 1]?.value;
   const isUp = lastPrice != null && prevClose != null ? lastPrice >= prevClose : true;
-  const color = isUp ? '#22c55e' : '#ef4444';
+  const color = isUp ? T.positive : T.negative;
   const gradientId = `pg_${ticker}`;
 
   const formatXAxis = (time) => {
@@ -79,7 +80,7 @@ function PriceChart({ ticker, quote }) {
             background: activeRange === r.label ? T.inputBg : 'transparent',
             border: `1px solid ${activeRange === r.label ? T.borderSub : T.border2}`,
             borderRadius: 6, padding: '4px 12px', fontSize: 11,
-            color: activeRange === r.label ? '#22c55e' : T.textMute,
+            color: activeRange === r.label ? T.accent : T.textMute,
             cursor: 'pointer', fontWeight: activeRange === r.label ? 600 : 400,
             transition: 'all 0.15s',
           }}>{r.label}</button>
@@ -89,7 +90,7 @@ function PriceChart({ ticker, quote }) {
       <div style={{ flex: 1, minHeight: 180, position: 'relative' }}>
         {loading && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.pageBg, zIndex: 1, borderRadius: 8 }}>
-            <div style={{ width: 16, height: 16, border: '2px solid #1a2535', borderTopColor: '#22c55e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ width: 16, height: 16, border: `2px solid ${T.spinnerTrack}`, borderTopColor: T.spinnerAccent, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
@@ -142,6 +143,47 @@ function PriceChart({ ticker, quote }) {
   );
 }
 
+function FundInformationTab({ ticker }) {
+  const T = useT();
+  const rows = getFundInformationRows(ticker);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 720 }}>
+      <p style={{ fontSize: 12, color: T.textMute, margin: 0, lineHeight: 1.5 }}>
+        Fund-specific notes are maintained in <code style={{ fontSize: 11, color: T.textSub }}>src/data/fundInformation.js</code>
+        {' '}(keyed by ticker). Markets and prospectus details change — verify material facts independently.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {rows.map(({ label, value, isPlaceholder }) => (
+          <div
+            key={label}
+            style={{
+              background: T.cardBg,
+              border: `1px solid ${T.border}`,
+              borderRadius: 8,
+              padding: '12px 14px',
+            }}
+          >
+            <div style={{
+              fontSize: 10,
+              color: T.textMute,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              fontWeight: 600,
+              marginBottom: 6,
+            }}>{label}</div>
+            <div style={{
+              fontSize: 13,
+              color: isPlaceholder ? T.textFaint : T.text,
+              lineHeight: 1.5,
+              fontStyle: isPlaceholder ? 'italic' : 'normal',
+            }}>{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ChartPanel({ ticker, quote, investmentAmount, years, futureValue, calculating, onCalculate, setInvestmentAmount, setYears }) {
   const T = useT();
   const [activeTab, setActiveTab] = useState('Price Chart');
@@ -154,7 +196,7 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
         {TABS.map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             background: 'none', border: 'none',
-            borderBottom: activeTab === tab ? '2px solid #22c55e' : '2px solid transparent',
+            borderBottom: activeTab === tab ? `2px solid ${T.accent}` : '2px solid transparent',
             padding: '10px 16px', fontSize: 12,
             fontWeight: activeTab === tab ? 600 : 400,
             color: activeTab === tab ? T.text : T.textMute,
@@ -182,7 +224,7 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
                   <input type="number" value={investmentAmount} onChange={e => setInvestmentAmount(e.target.value)}
                     placeholder="10000" min={1} step={0.01}
                     style={{ background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '10px 14px', fontSize: 14, color: T.text, outline: 'none', width: 160, fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                    onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                    onFocus={e => e.target.style.borderColor = T.focusRing}
                     onBlur={e => e.target.style.borderColor = T.border}
                   />
                 </div>
@@ -191,14 +233,14 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
                   <input type="number" value={years} onChange={e => setYears(e.target.value)}
                     placeholder="10" min={1} max={50} step={1}
                     style={{ background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '10px 14px', fontSize: 14, color: T.text, outline: 'none', width: 100, fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-                    onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                    onFocus={e => e.target.style.borderColor = T.focusRing}
                     onBlur={e => e.target.style.borderColor = T.border}
                   />
                 </div>
                 <button onClick={onCalculate} disabled={calculating} style={{
-                  background: calculating ? T.inputBg : '#1d4ed8',
+                  background: calculating ? T.inputBg : T.brand,
                   color: calculating ? T.textMute : '#ffffff',
-                  border: `1px solid ${calculating ? T.border : '#2563eb'}`,
+                  border: `1px solid ${calculating ? T.border : T.brand}`,
                   borderRadius: 8, padding: '10px 24px',
                   fontSize: 13, fontWeight: 600, cursor: calculating ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', gap: 8,
@@ -245,6 +287,8 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
             </div>
           );
         })()}
+
+        {activeTab === 'Information' && <FundInformationTab ticker={ticker} />}
       </div>
     </div>
   );

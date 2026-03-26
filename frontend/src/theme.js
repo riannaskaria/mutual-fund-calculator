@@ -1,17 +1,68 @@
 import { createContext, useContext } from 'react';
 
+/** Public-site palette derived from goldmansachs.com / GS UI kit (approximate). */
+export const GS_BRAND = {
+  navy: '#092C61',
+  blue: '#186ade',
+  blueSoft: '#7399C6',
+  ink: '#121212',
+  slate: '#5b7282',
+  canvas: '#F7F7FA',
+  rule: '#dce3e8',
+  positive: '#398025',
+  negative: '#C2170A',
+};
+
+/** GS Sans / GS Serif are loaded in index.css from cdn.gs.com (same as the corporate site). */
+export const FONT_UI = "'GS Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+export const FONT_DISPLAY = "'GS Serif', Georgia, 'Times New Roman', serif";
+
 export const THEMES = {
   dark: {
-    pageBg: '#0a0f1a', panelBg: '#0d1520', cardBg: '#111926', inputBg: '#1a2535',
-    border: '#1e2d40', border2: '#131d2a', borderSub: '#1a2535',
-    text: '#e2e8f0', textSub: '#7799bb', textMute: '#556677', textFaint: '#334455',
-    hover: 'rgba(255,255,255,0.025)', newsItemBg: '#080d16',
+    pageBg: '#121212',
+    panelBg: '#161616',
+    cardBg: '#1e1e1e',
+    inputBg: '#2a2a2a',
+    border: '#2d2d2d',
+    border2: '#252525',
+    borderSub: '#333333',
+    text: '#f0f2f4',
+    textSub: '#a8b0b8',
+    textMute: '#8a939c',
+    textFaint: '#6d7580',
+    hover: 'rgba(115, 153, 198, 0.08)',
+    newsItemBg: '#141414',
+    brand: '#7399C6',
+    accent: '#186ade',
+    accentSoft: '#7399C6',
+    positive: '#6bbf4a',
+    negative: '#e07060',
+    focusRing: '#186ade',
+    spinnerTrack: '#2a2a2a',
+    spinnerAccent: '#7399C6',
   },
   light: {
-    pageBg: '#f0f4f8', panelBg: '#ffffff', cardBg: '#f8fafc', inputBg: '#eef2f7',
-    border: '#dde3ec', border2: '#e8edf4', borderSub: '#dde3ec',
-    text: '#1e2d40', textSub: '#4a6070', textMute: '#7a8899', textFaint: '#a0b0bc',
-    hover: 'rgba(0,0,0,0.03)', newsItemBg: '#f8fafc',
+    pageBg: '#F7F7FA',
+    panelBg: '#FFFFFF',
+    cardBg: '#FFFFFF',
+    inputBg: '#f2f5f7',
+    border: '#dce3e8',
+    border2: '#e8ecf0',
+    borderSub: '#cdd6de',
+    text: '#121212',
+    textSub: '#5b7282',
+    textMute: '#6d7880',
+    textFaint: '#8b95a0',
+    hover: 'rgba(9, 44, 97, 0.06)',
+    newsItemBg: '#FFFFFF',
+    brand: '#092C61',
+    accent: '#186ade',
+    accentSoft: '#7399C6',
+    positive: '#398025',
+    negative: '#C2170A',
+    focusRing: '#186ade',
+    spinnerTrack: '#e8ecf0',
+    spinnerAccent: '#092C61',
   },
 };
 
