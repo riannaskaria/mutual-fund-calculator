@@ -109,6 +109,17 @@ export default function TradingDashboard() {
   const [calcHistory, setCalcHistory] = useState([]);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [newsOpen, setNewsOpen] = useState(true);
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const acc = JSON.parse(localStorage.getItem('mf_account_v1') || '{}');
+      return new Set(acc.favorites || []);
+    } catch { return new Set(); }
+  });
+  const [alerts, setAlerts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mf_alerts_v1') || '[]'); }
+    catch { return []; }
+  });
+  const [alertToast, setAlertToast] = useState(null);
   const [customTickers, setCustomTickers] = useState(() => {
     try { return JSON.parse(localStorage.getItem('mf_custom_tickers') || '[]'); }
     catch { return []; }
@@ -144,6 +155,26 @@ export default function TradingDashboard() {
       setFunds(results.filter(Boolean));
       setLoading(false);
       setLastRefresh(new Date());
+      // Check price alerts
+      try {
+        const currentAlerts = JSON.parse(localStorage.getItem('mf_alerts_v1') || '[]');
+        const triggered = [];
+        const updatedAlerts = currentAlerts.map(alert => {
+          if (alert.triggered) return alert;
+          const fund = results.find(f => f?.id === alert.ticker);
+          if (!fund?.price) return alert;
+          const hit = alert.direction === 'above'
+            ? fund.price >= alert.targetPrice
+            : fund.price <= alert.targetPrice;
+          if (hit) { triggered.push(alert); return { ...alert, triggered: true }; }
+          return alert;
+        });
+        if (triggered.length > 0) {
+          localStorage.setItem('mf_alerts_v1', JSON.stringify(updatedAlerts));
+          setAlerts(updatedAlerts);
+          setAlertToast(triggered[0]);
+        }
+      } catch {}
     });
   }, []);
 
@@ -207,6 +238,43 @@ export default function TradingDashboard() {
       .catch(err => console.warn('Quote fetch failed:', err))
       .finally(() => setQuoteLoading(false));
   }, [funds, selectedIdx]);
+
+  // Auto-dismiss alert toast after 7s
+  useEffect(() => {
+    if (!alertToast) return;
+    const t = setTimeout(() => setAlertToast(null), 7000);
+    return () => clearTimeout(t);
+  }, [alertToast]);
+
+  const toggleFav = useCallback((ticker) => {
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (next.has(ticker)) next.delete(ticker); else next.add(ticker);
+      try {
+        const acc = JSON.parse(localStorage.getItem('mf_account_v1') || '{}');
+        acc.favorites = [...next];
+        localStorage.setItem('mf_account_v1', JSON.stringify(acc));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const addAlert = useCallback((ticker, targetPrice, direction) => {
+    const a = { id: Date.now(), ticker, targetPrice: parseFloat(targetPrice), direction, triggered: false };
+    setAlerts(prev => {
+      const next = [...prev, a];
+      try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const removeAlert = useCallback((id) => {
+    setAlerts(prev => {
+      const next = prev.filter(a => a.id !== id);
+      try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
 
   const saveResult = useCallback((fund, amount, yearsNum, result) => {
     setFutureValue(result);
@@ -279,12 +347,14 @@ export default function TradingDashboard() {
       <div style={{ height: '100vh', background: T.pageBg, display: 'flex', flexDirection: 'column', fontFamily: FONT_UI, overflow: 'hidden' }}>
         <TickerBar />
         <TopBar onSettings={() => setSettingsOpen(true)} onAccount={() => setAccountOpen(true)} />
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0, gap: 8, padding: '6px 8px 8px' }}>
           <PositionsPanel
             funds={funds}
             selectedIdx={selectedIdx}
             lastRefresh={lastRefresh}
             customTickers={customTickers}
+            favorites={favorites}
+            onToggleFav={toggleFav}
             onAddFund={handleAddCustomFund}
             onRemoveFund={handleRemoveFund}
             onSelect={idx => {
@@ -300,12 +370,15 @@ export default function TradingDashboard() {
               }
             }}
           />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, border: `1px solid ${T.border}` }}>
             <FundHeader
               ticker={ticker}
               fundName={selectedFund ? getFundBaseName(selectedFund) : ''}
               quote={quote}
               quoteLoading={quoteLoading}
+              alerts={alerts}
+              onAddAlert={addAlert}
+              onRemoveAlert={removeAlert}
             />
             <ChartPanel
               ticker={ticker}
@@ -324,7 +397,37 @@ export default function TradingDashboard() {
         </div>
         <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} theme={theme} setTheme={setTheme} />
         <GoldmanBot funds={funds} quote={quote} articles={newsArticles} selectedFund={selectedFund} />
-        <AccountPanel open={accountOpen} onClose={() => setAccountOpen(false)} funds={funds} quote={quote} selectedFund={selectedFund} />
+        <AccountPanel
+          open={accountOpen}
+          onClose={() => setAccountOpen(false)}
+          funds={funds}
+          quote={quote}
+          selectedFund={selectedFund}
+          favorites={favorites}
+          onToggleFav={toggleFav}
+          alerts={alerts}
+          onRemoveAlert={removeAlert}
+        />
+        {/* Alert toast */}
+        {alertToast && (
+          <div style={{
+            position: 'fixed', bottom: 80, right: 24, zIndex: 1000,
+            background: T.accent, color: '#fff',
+            borderRadius: 12, padding: '12px 16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+            fontSize: 13, fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: 10,
+            maxWidth: 340, animation: 'slideInRight 0.22s ease',
+          }}>
+            <span style={{ fontSize: 18 }}>🔔</span>
+            <span style={{ flex: 1 }}>
+              <strong>{alertToast.ticker}</strong> reached{' '}
+              ${alertToast.targetPrice.toFixed(2)}{' '}
+              ({alertToast.direction === 'above' ? '↑ above' : '↓ below'} target)
+            </span>
+            <button onClick={() => setAlertToast(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', fontSize: 18, lineHeight: 1 }}>×</button>
+          </div>
+        )}
       </div>
     </ThemeCtx.Provider>
   );

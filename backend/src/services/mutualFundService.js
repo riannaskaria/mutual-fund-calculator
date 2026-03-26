@@ -112,4 +112,7 @@ async function calculate(ticker, principal, years) {
   return { ticker, principal, years, beta, expectedReturnRate, riskFreeRate: RISK_FREE_RATE, capmRate, futureValue };
 }
 
-module.exports = { getAllFunds, validateTicker, calculate };
+// S&P 500 proxy used for benchmark comparison in /api/compare
+const BENCHMARK_TICKER = 'VFIAX';
+
+module.exports = { getAllFunds, validateTicker, calculate, BENCHMARK_TICKER };

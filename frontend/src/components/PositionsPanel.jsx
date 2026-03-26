@@ -3,7 +3,7 @@ import { useT, getFundTicker, getFundBaseName } from '../theme';
 
 const PAGE_SIZE = 20;
 
-export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefresh, customTickers = [], onAddFund, onRemoveFund }) {
+export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefresh, customTickers = [], favorites = new Set(), onToggleFav, onAddFund, onRemoveFund }) {
   const T = useT();
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -56,7 +56,7 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
 
   return (
     <div style={{
-      width: 260, background: T.panelBg, borderRight: `1px solid ${T.border}`,
+      width: 260, background: T.panelBg, border: `1px solid ${T.border}`, borderRadius: 14,
       backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
       display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden',
     }}>
@@ -200,6 +200,20 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
                   )}
                 </div>
               </div>
+              {/* Favorite button */}
+              <button
+                onClick={e => { e.stopPropagation(); onToggleFav?.(ticker); }}
+                title={favorites.has(ticker) ? 'Remove from favorites' : 'Add to favorites'}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: favorites.has(ticker) ? '#facc15' : T.textFaint,
+                  fontSize: 13, padding: '0 2px',
+                  flexShrink: 0, display: 'flex', alignItems: 'center',
+                  transition: 'color 0.12s',
+                }}
+                onMouseEnter={e => { if (!favorites.has(ticker)) e.currentTarget.style.color = '#facc15'; }}
+                onMouseLeave={e => { if (!favorites.has(ticker)) e.currentTarget.style.color = T.textFaint; }}
+              >{favorites.has(ticker) ? '★' : '☆'}</button>
               {/* Remove button for all funds */}
               <button
                 onClick={e => { e.stopPropagation(); onRemoveFund(ticker); }}

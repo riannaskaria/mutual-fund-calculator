@@ -16,7 +16,11 @@ function loadAccount() {
 }
 
 function saveAccount(data) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { }
+    try {
+        // Preserve favorites managed externally (by TradingDashboard)
+        const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, favorites: existing.favorites || data.favorites || [] }));
+    } catch { }
 }
 
 export function loadProfile() {
@@ -101,7 +105,7 @@ function EmptyState({ text }) {
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
-export default function AccountPanel({ open, onClose, funds = [], quote, selectedFund }) {
+export default function AccountPanel({ open, onClose, funds = [], quote, selectedFund, favorites: favProp, onToggleFav, alerts = [], onRemoveAlert }) {
     const T = useT();
     const [account, setAccount] = useState(loadAccount);
     const [profile, setProfile] = useState(loadProfile);
@@ -141,7 +145,16 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     };
 
     // ── derived data ──────────────────────────────────────────────────────────
-    const favSet = new Set(account.favorites);
+    const favSet = favProp instanceof Set ? favProp : new Set(account.favorites);
+    const doToggleFav = (ticker) => {
+        if (onToggleFav) onToggleFav(ticker);
+        else setAccount(prev => {
+            const favs = prev.favorites.includes(ticker)
+                ? prev.favorites.filter(t => t !== ticker)
+                : [...prev.favorites, ticker];
+            return { ...prev, favorites: favs };
+        });
+    };
 
     const positionTotals = Object.entries(account.positions).map(([ticker, entries]) => {
         const total = entries.reduce((s, e) => s + e.amount, 0);
@@ -153,14 +166,6 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     const favFunds = funds.filter(f => favSet.has(f.ticker || f.id));
 
     // ── actions ───────────────────────────────────────────────────────────────
-    const toggleFav = useCallback((ticker) => {
-        setAccount(prev => {
-            const favs = prev.favorites.includes(ticker)
-                ? prev.favorites.filter(t => t !== ticker)
-                : [...prev.favorites, ticker];
-            return { ...prev, favorites: favs };
-        });
-    }, []);
 
     const addInvestment = useCallback(() => {
         const ticker = addTicker.trim().toUpperCase();
@@ -260,7 +265,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
 
                     {/* tabs */}
                     <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0, padding: '0 8px' }}>
-                        {['Profile', 'Portfolio', 'Favorites', 'History'].map(t => (
+                        {['Profile', 'Portfolio', 'Favorites', 'Alerts', 'History'].map(t => (
                             <button key={t} onClick={() => setActiveTab(t)} style={tabBtn(t)}>{t}</button>
                         ))}
                     </div>
@@ -334,10 +339,11 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                 {/* Summary stats */}
                                 <div>
                                     <SectionHeading>Portfolio Summary</SectionHeading>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                                         <StatCard label="Invested" value={fmt$(grandTotal)} accent={T.positive} />
                                         <StatCard label="Positions" value={positionTotals.length} sub="funds" />
                                         <StatCard label="Favorites" value={favSet.size} sub="saved" />
+                                        <StatCard label="Alerts" value={alerts.filter(a => !a.triggered).length} sub="active" />
                                     </div>
                                 </div>
                             </div>
@@ -465,7 +471,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                             </div>
                                                         </div>
                                                     )}
-                                                    <button onClick={() => toggleFav(ticker)} style={{
+                                                    <button onClick={() => doToggleFav(ticker)} style={{
                                                         background: 'none', border: `1px solid ${T.border}`, borderRadius: 5,
                                                         cursor: 'pointer', color: T.textMute, fontSize: 11, padding: '3px 8px',
                                                     }}>Remove</button>
@@ -497,7 +503,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                             ${f.price.toFixed(2)}
                                                         </span>
                                                     )}
-                                                    <StarButton active={isFav} onClick={() => toggleFav(ticker)} />
+                                                    <StarButton active={isFav} onClick={() => doToggleFav(ticker)} />
                                                 </div>
                                             );
                                         })}
@@ -505,6 +511,76 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                 </div>
                             </>
                         )}
+
+                        {/* ── ALERTS TAB ── */}
+                        {activeTab === 'Alerts' && (() => {
+                            const activeAlerts = alerts.filter(a => !a.triggered);
+                            const triggered = alerts.filter(a => a.triggered);
+                            return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                    <div>
+                                        <SectionHeading>Active Alerts</SectionHeading>
+                                        {activeAlerts.length === 0
+                                            ? <EmptyState text="No active alerts. Set one using the 🔔 bell icon in any fund header." />
+                                            : activeAlerts.map(a => (
+                                                <div key={a.id} style={{
+                                                    background: T.cardBg, border: `1px solid ${T.border}`,
+                                                    borderRadius: 9, padding: '11px 14px', marginBottom: 8,
+                                                    display: 'flex', alignItems: 'center', gap: 10,
+                                                }}>
+                                                    <div style={{
+                                                        width: 30, height: 30, borderRadius: 6,
+                                                        background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: 9, color: '#fff', fontWeight: 700, flexShrink: 0,
+                                                    }}>{a.ticker.slice(0, 3)}</div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{a.ticker}</div>
+                                                        <div style={{ fontSize: 11, color: T.textMute }}>
+                                                            {a.direction === 'above' ? '↑ Notify when above' : '↓ Notify when below'}{' '}
+                                                            <strong style={{ color: T.accent }}>${a.targetPrice.toFixed(2)}</strong>
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={() => onRemoveAlert?.(a.id)} style={{
+                                                        background: 'none', border: `1px solid ${T.border}`, borderRadius: 5,
+                                                        cursor: 'pointer', color: T.textMute, fontSize: 11, padding: '3px 8px',
+                                                    }}>Remove</button>
+                                                </div>
+                                            ))
+                                        }
+                                    </div>
+                                    {triggered.length > 0 && (
+                                        <div>
+                                            <SectionHeading>Triggered</SectionHeading>
+                                            {triggered.map(a => (
+                                                <div key={a.id} style={{
+                                                    background: T.cardBg, border: `1px solid ${T.border}`,
+                                                    borderRadius: 9, padding: '11px 14px', marginBottom: 8,
+                                                    display: 'flex', alignItems: 'center', gap: 10, opacity: 0.65,
+                                                }}>
+                                                    <div style={{
+                                                        width: 30, height: 30, borderRadius: 6,
+                                                        background: `linear-gradient(135deg, ${T.positive}, ${T.positive}88)`,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: 14, color: '#fff', flexShrink: 0,
+                                                    }}>✓</div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{a.ticker}</div>
+                                                        <div style={{ fontSize: 11, color: T.textMute }}>
+                                                            {a.direction === 'above' ? '↑' : '↓'} ${a.targetPrice.toFixed(2)} · Hit
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={() => onRemoveAlert?.(a.id)} style={{
+                                                        background: 'none', border: `1px solid ${T.border}`, borderRadius: 5,
+                                                        cursor: 'pointer', color: T.textMute, fontSize: 11, padding: '3px 8px',
+                                                    }}>Dismiss</button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
 
                         {/* ── HISTORY TAB ── */}
                         {activeTab === 'History' && (

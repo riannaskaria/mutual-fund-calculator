@@ -119,10 +119,10 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
         onClick={onToggle}
         title="Show news"
         style={{
-          width: 28, background: T.newsItemBg, borderLeft: `1px solid ${T.border}`,
+          width: 28, background: T.newsItemBg, border: `1px solid ${T.border}`, borderRadius: 14,
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           paddingTop: 14, gap: 10, flexShrink: 0, cursor: 'pointer',
-          transition: 'background 0.15s',
+          transition: 'background 0.15s', overflow: 'hidden',
         }}
         onMouseEnter={e => e.currentTarget.style.background = T.hover}
         onMouseLeave={e => e.currentTarget.style.background = T.newsItemBg}
@@ -138,7 +138,7 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
   }
 
   return (
-    <div style={{ width: 288, background: T.newsItemBg, borderLeft: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
+    <div style={{ width: 288, background: T.newsItemBg, border: `1px solid ${T.border}`, borderRadius: 14, display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '11px 14px 10px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
