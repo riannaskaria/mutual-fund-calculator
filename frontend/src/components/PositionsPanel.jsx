@@ -200,21 +200,19 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
                   )}
                 </div>
               </div>
-              {/* Remove button for custom funds */}
-              {isCustom && (
-                <button
-                  onClick={e => { e.stopPropagation(); onRemoveFund(ticker); }}
-                  title="Remove"
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: T.textFaint, fontSize: 14, padding: '0 8px',
-                    flexShrink: 0, display: 'flex', alignItems: 'center',
-                    transition: 'color 0.12s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = T.negative}
-                  onMouseLeave={e => e.currentTarget.style.color = T.textFaint}
-                >×</button>
-              )}
+              {/* Remove button for all funds */}
+              <button
+                onClick={e => { e.stopPropagation(); onRemoveFund(ticker); }}
+                title="Remove from watchlist"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: T.textFaint, fontSize: 14, padding: '0 8px',
+                  flexShrink: 0, display: 'flex', alignItems: 'center',
+                  transition: 'color 0.12s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = T.negative}
+                onMouseLeave={e => e.currentTarget.style.color = T.textFaint}
+              >×</button>
             </div>
           );
         })}

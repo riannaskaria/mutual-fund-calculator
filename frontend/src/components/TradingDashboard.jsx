@@ -113,19 +113,18 @@ export default function TradingDashboard() {
     try { return JSON.parse(localStorage.getItem('mf_custom_tickers') || '[]'); }
     catch { return []; }
   });
+  const [hiddenTickers, setHiddenTickers] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('mf_hidden_tickers') || '[]')); }
+    catch { return new Set(); }
+  });
   const T = THEMES[theme];
-
-  useEffect(() => {
-    localStorage.setItem('mf_custom_tickers', JSON.stringify(customTickers));
-  }, [customTickers]);
 
   // Fetch all fund prices (called on mount + every 15s)
   const fetchAllPrices = useCallback(() => {
-    const stored = (() => {
-      try { return JSON.parse(localStorage.getItem('mf_custom_tickers') || '[]'); } catch { return []; }
-    })();
-    const extra = stored.filter(t => !CAPM_SUPPORTED.has(t));
-    const tickers = [...CAPM_SUPPORTED, ...extra];
+    const custom = (() => { try { return JSON.parse(localStorage.getItem('mf_custom_tickers') || '[]'); } catch { return []; } })();
+    const hidden = (() => { try { return new Set(JSON.parse(localStorage.getItem('mf_hidden_tickers') || '[]')); } catch { return new Set(); } })();
+    const extra = custom.filter(t => !CAPM_SUPPORTED.has(t));
+    const tickers = [...CAPM_SUPPORTED, ...extra].filter(t => !hidden.has(t));
     Promise.all(
       tickers.map(sym =>
         fetch(`/yahoo-api/v8/finance/chart/${sym}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) })
@@ -142,8 +141,7 @@ export default function TradingDashboard() {
           .catch(() => null)
       )
     ).then(results => {
-      const valid = results.filter(Boolean);
-      setFunds(valid);
+      setFunds(results.filter(Boolean));
       setLoading(false);
       setLastRefresh(new Date());
     });
@@ -152,29 +150,45 @@ export default function TradingDashboard() {
   const handleAddCustomFund = useCallback(async (sym) => {
     const t = sym.trim().toUpperCase();
     if (!t) return;
-    const stored = (() => {
-      try { return JSON.parse(localStorage.getItem('mf_custom_tickers') || '[]'); } catch { return []; }
-    })();
-    if (CAPM_SUPPORTED.has(t) || stored.includes(t)) return;
-    const j = await fetch(`/yahoo-api/v8/finance/chart/${t}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) }).then(r => r.json());
-    const meta = j?.chart?.result?.[0]?.meta;
-    if (!meta?.symbol) throw new Error(`"${t}" not found on Yahoo Finance`);
-    setCustomTickers(prev => {
-      const next = [...prev.filter(x => x !== t), t];
-      localStorage.setItem('mf_custom_tickers', JSON.stringify(next));
+    const custom = (() => { try { return JSON.parse(localStorage.getItem('mf_custom_tickers') || '[]'); } catch { return []; } })();
+    if (custom.includes(t)) return;
+    // Un-hide if previously hidden
+    setHiddenTickers(prev => {
+      if (!prev.has(t)) return prev;
+      const next = new Set(prev); next.delete(t);
+      localStorage.setItem('mf_hidden_tickers', JSON.stringify([...next]));
       return next;
     });
+    if (!CAPM_SUPPORTED.has(t)) {
+      const j = await fetch(`/yahoo-api/v8/finance/chart/${t}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) }).then(r => r.json());
+      const meta = j?.chart?.result?.[0]?.meta;
+      if (!meta?.symbol) throw new Error(`"${t}" not found on Yahoo Finance`);
+      setCustomTickers(prev => {
+        const next = [...prev.filter(x => x !== t), t];
+        localStorage.setItem('mf_custom_tickers', JSON.stringify(next));
+        return next;
+      });
+    }
     fetchAllPrices();
   }, [fetchAllPrices]);
 
-  const handleRemoveCustomFund = useCallback((sym) => {
-    setCustomTickers(prev => {
-      const next = prev.filter(t => t !== sym);
-      localStorage.setItem('mf_custom_tickers', JSON.stringify(next));
-      return next;
-    });
+  // Removes any fund from the visible list (custom → deleted; standard → hidden)
+  const handleRemoveFund = useCallback((sym) => {
+    if (customTickers.includes(sym)) {
+      setCustomTickers(prev => {
+        const next = prev.filter(t => t !== sym);
+        localStorage.setItem('mf_custom_tickers', JSON.stringify(next));
+        return next;
+      });
+    } else {
+      setHiddenTickers(prev => {
+        const next = new Set(prev); next.add(sym);
+        localStorage.setItem('mf_hidden_tickers', JSON.stringify([...next]));
+        return next;
+      });
+    }
     setFunds(prev => prev.filter(f => f.id !== sym));
-  }, []);
+  }, [customTickers]);
 
   useEffect(() => {
     fetchAllPrices();
@@ -272,7 +286,7 @@ export default function TradingDashboard() {
             lastRefresh={lastRefresh}
             customTickers={customTickers}
             onAddFund={handleAddCustomFund}
-            onRemoveFund={handleRemoveCustomFund}
+            onRemoveFund={handleRemoveFund}
             onSelect={idx => {
               setSelectedIdx(idx);
               const fund = funds[idx];
