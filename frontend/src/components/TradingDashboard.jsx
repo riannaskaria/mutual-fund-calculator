@@ -173,6 +173,28 @@ export default function TradingDashboard() {
           localStorage.setItem('mf_alerts_v1', JSON.stringify(updatedAlerts));
           setAlerts(updatedAlerts);
           setAlertToast(triggered[0]);
+          // Send email alerts
+          try {
+            const emailCfg = JSON.parse(localStorage.getItem('mf_email_alerts_v1') || '{}');
+            const profileData = JSON.parse(localStorage.getItem('mf_profile_v1') || '{}');
+            const to = emailCfg.email || profileData.email;
+            if (emailCfg.enabled && to) {
+              triggered.forEach(alert => {
+                const fund = results.find(f => f?.id === alert.ticker);
+                fetch('/api/email/send-alert', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    to,
+                    ticker: alert.ticker,
+                    targetPrice: alert.targetPrice,
+                    direction: alert.direction,
+                    currentPrice: fund?.price ?? null,
+                  }),
+                }).catch(() => {});
+              });
+            }
+          } catch {}
         }
       } catch {}
     });
@@ -301,7 +323,7 @@ export default function TradingDashboard() {
           .then(r => r.json());
         const closes = hist?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean) ?? [];
         let expectedReturn = 0.08;
-        if (closes.length >= 2) {
+        if (closes.length >= 2 && closes[0] !== 0) {
           expectedReturn = (closes[closes.length - 1] - closes[0]) / closes[0];
         }
         const rf = 0.0425;

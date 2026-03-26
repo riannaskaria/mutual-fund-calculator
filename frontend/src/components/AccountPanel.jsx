@@ -2,8 +2,27 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useT } from '../theme';
 
 // ─── persistence helpers ──────────────────────────────────────────────────────
-const STORAGE_KEY = 'mf_account_v1';
-const PROFILE_KEY = 'mf_profile_v1';
+const STORAGE_KEY       = 'mf_account_v1';
+const PROFILE_KEY       = 'mf_profile_v1';
+const PICTURE_KEY       = 'mf_profile_picture';
+const EMAIL_ALERTS_KEY  = 'mf_email_alerts_v1';
+
+function loadEmailAlerts() {
+    try { return JSON.parse(localStorage.getItem(EMAIL_ALERTS_KEY) || '{"enabled":false,"email":""}'); }
+    catch { return { enabled: false, email: '' }; }
+}
+
+// Default avatar — minimalist fund chart icon rendered inline as SVG
+function FundAvatarIcon({ size = 40, color = 'rgba(255,255,255,0.92)' }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3,18 7,13 11,15 17,7 21,4" />
+            <circle cx="21" cy="4" r="1.8" fill={color} stroke="none" />
+            <line x1="2" y1="21" x2="22" y2="21" />
+            <line x1="2" y1="21" x2="2" y2="3" />
+        </svg>
+    );
+}
 
 function loadAccount() {
     try {
@@ -116,10 +135,19 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     const [addTicker, setAddTicker] = useState('');
     const [addAmount, setAddAmount] = useState('');
     const [addNote, setAddNote] = useState('');
+    const [customPicture, setCustomPicture] = useState(() => {
+        try { return localStorage.getItem(PICTURE_KEY) || null; } catch { return null; }
+    });
+    const [emailAlerts, setEmailAlerts] = useState(loadEmailAlerts);
+    const [testStatus, setTestStatus] = useState(null); // null | 'sending' | 'ok' | 'error'
     const overlayRef = useRef();
+    const pictureInputRef = useRef(null);
 
     useEffect(() => { saveAccount(account); }, [account]);
     useEffect(() => { saveProfile(profile); }, [profile]);
+    useEffect(() => {
+        try { localStorage.setItem(EMAIL_ALERTS_KEY, JSON.stringify(emailAlerts)); } catch {}
+    }, [emailAlerts]);
 
     useEffect(() => {
         if (selectedFund) setAddTicker(selectedFund.ticker || selectedFund.id || '');
@@ -130,6 +158,40 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, [onClose]);
+
+    const sendTestEmail = useCallback(async () => {
+        const to = emailAlerts.email || profile.email;
+        if (!to) return;
+        setTestStatus('sending');
+        try {
+            const r = await fetch('/api/email/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ to }),
+            });
+            const data = await r.json();
+            setTestStatus(data.ok ? 'ok' : 'error');
+        } catch { setTestStatus('error'); }
+        setTimeout(() => setTestStatus(null), 4000);
+    }, [emailAlerts.email, profile.email]);
+
+    const handlePictureUpload = useCallback((e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const b64 = ev.target.result;
+            setCustomPicture(b64);
+            try { localStorage.setItem(PICTURE_KEY, b64); } catch {}
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+    }, []);
+
+    const removePicture = useCallback(() => {
+        setCustomPicture(null);
+        try { localStorage.removeItem(PICTURE_KEY); } catch {}
+    }, []);
 
     const startEditProfile = () => {
         setDraftName(profile.name);
@@ -215,6 +277,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     if (!open) return null;
 
     const initials = getInitials(profile.name);
+    const effectivePicture = customPicture || null;
 
     return (
         <>
@@ -247,12 +310,15 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
 
                     {/* compact avatar header */}
                     <div style={{ padding: '12px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{
-                            width: 38, height: 38, borderRadius: '50%',
-                            background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0,
-                        }}>{initials}</div>
+                        {effectivePicture ? (
+                            <img src={effectivePicture} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${T.border}` }} onError={e => { e.target.style.display = 'none'; }} />
+                        ) : profile.name ? (
+                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials}</div>
+                        ) : (
+                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <FundAvatarIcon size={22} />
+                            </div>
+                        )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {profile.name || <span style={{ color: T.textMute, fontStyle: 'italic', fontWeight: 400 }}>Set your name</span>}
@@ -277,13 +343,30 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                         {activeTab === 'Profile' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                                 {/* Avatar + name display */}
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '10px 0 4px' }}>
-                                    <div style={{
-                                        width: 72, height: 72, borderRadius: '50%',
-                                        background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: 26, fontWeight: 700, color: '#fff',
-                                    }}>{initials}</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '10px 0 4px' }}>
+                                    <div style={{ position: 'relative' }}>
+                                        <div onClick={() => pictureInputRef.current?.click()} title="Change photo" style={{ cursor: 'pointer', position: 'relative', width: 80, height: 80, borderRadius: '50%', overflow: 'hidden' }}>
+                                            {effectivePicture ? (
+                                                <img src={effectivePicture} alt="" style={{ width: 80, height: 80, objectFit: 'cover', display: 'block' }} />
+                                            ) : profile.name ? (
+                                                <div style={{ width: 80, height: 80, background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 700, color: '#fff' }}>{initials}</div>
+                                            ) : (
+                                                <div style={{ width: 80, height: 80, background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <FundAvatarIcon size={44} />
+                                                </div>
+                                            )}
+                                            {/* camera hover overlay */}
+                                            <div className="avatar-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                                                onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+                                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: 10, color: T.textFaint, cursor: 'pointer' }} onClick={() => pictureInputRef.current?.click()}>Change photo</div>
+                                    {customPicture && <div style={{ fontSize: 10, color: T.negative, cursor: 'pointer' }} onClick={removePicture}>Remove</div>}
                                     <div style={{ textAlign: 'center' }}>
                                         <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>
                                             {profile.name || <span style={{ color: T.textMute, fontStyle: 'italic', fontWeight: 400 }}>No name set</span>}
@@ -334,6 +417,75 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                             </div>
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Email Alerts */}
+                                <div>
+                                    <SectionHeading>Email Alerts</SectionHeading>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                        {/* Email address input */}
+                                        <div>
+                                            <label style={{ fontSize: 10, color: T.textMute, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>Alert Email Address</label>
+                                            <input
+                                                type="email"
+                                                placeholder={profile.email || 'e.g. you@example.com'}
+                                                value={emailAlerts.email}
+                                                onChange={e => setEmailAlerts(prev => ({ ...prev, email: e.target.value }))}
+                                                style={inputStyle}
+                                            />
+                                            {!emailAlerts.email && profile.email && (
+                                                <div style={{ fontSize: 10, color: T.textFaint, marginTop: 4 }}>Leave blank to use profile email: {profile.email}</div>
+                                            )}
+                                        </div>
+
+                                        {/* Enable toggle */}
+                                        <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>Price alert emails</div>
+                                                <div style={{ fontSize: 11, color: T.textMute, marginTop: 2 }}>
+                                                    {emailAlerts.enabled ? 'Emails will be sent when alerts trigger' : 'Alerts trigger silently — no emails sent'}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setEmailAlerts(prev => ({ ...prev, enabled: !prev.enabled }))}
+                                                style={{
+                                                    width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
+                                                    background: emailAlerts.enabled ? T.accent : T.border,
+                                                    position: 'relative', transition: 'background 0.2s',
+                                                }}
+                                            >
+                                                <div style={{
+                                                    position: 'absolute', top: 3, left: emailAlerts.enabled ? 23 : 3,
+                                                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                                                    transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                                                }} />
+                                            </button>
+                                        </div>
+
+                                        {/* Test email button */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <button
+                                                onClick={sendTestEmail}
+                                                disabled={testStatus === 'sending' || (!emailAlerts.email && !profile.email)}
+                                                style={{
+                                                    background: testStatus === 'ok' ? T.positive : testStatus === 'error' ? T.negative : T.accent,
+                                                    color: '#fff', border: 'none', borderRadius: 7,
+                                                    padding: '8px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                                    opacity: testStatus === 'sending' || (!emailAlerts.email && !profile.email) ? 0.6 : 1,
+                                                    transition: 'background 0.2s',
+                                                }}
+                                            >
+                                                {testStatus === 'sending' ? 'Sending…' : testStatus === 'ok' ? 'Sent!' : testStatus === 'error' ? 'Failed' : 'Send test email'}
+                                            </button>
+                                            {!emailAlerts.email && !profile.email && (
+                                                <span style={{ fontSize: 11, color: T.textFaint, fontStyle: 'italic' }}>Set an email above first</span>
+                                            )}
+                                        </div>
+
+                                        <div style={{ fontSize: 10, color: T.textFaint, lineHeight: 1.5 }}>
+                                            Requires SMTP configured in backend/.env (SMTP_USER + SMTP_PASS).
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Summary stats */}
@@ -621,6 +773,8 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                     </div>
                 </div>
             </div>
+
+            <input ref={pictureInputRef} type="file" accept="image/*" onChange={handlePictureUpload} style={{ display: 'none' }} />
 
             <style>{`
                 @keyframes slideInRight {

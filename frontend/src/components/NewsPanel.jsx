@@ -60,7 +60,7 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
 
   useEffect(() => {
     if (onArticlesUpdate) onArticlesUpdate(articles);
-  }, [articles]);
+  }, [articles, onArticlesUpdate]);
 
   const fetchNews = async (searchTerm, forceRefresh = false) => {
     if (forceRefresh) setArticles([]);
