@@ -227,17 +227,17 @@ export default function TradingDashboard() {
     return () => clearInterval(iv);
   }, [fetchAllPrices]);
 
-  // Fetch quote whenever selected fund changes
+  // Fetch quote only when the selected ticker actually changes, not on every 15s price refresh
+  const selectedFundId = funds[selectedIdx]?.id ?? null;
   useEffect(() => {
-    const fund = funds[selectedIdx];
-    if (!fund) return;
+    if (!selectedFundId) return;
     setQuote(null);
     setQuoteLoading(true);
-    fetchYahooQuote(fund.id)
+    fetchYahooQuote(selectedFundId)
       .then(setQuote)
       .catch(err => console.warn('Quote fetch failed:', err))
       .finally(() => setQuoteLoading(false));
-  }, [funds, selectedIdx]);
+  }, [selectedFundId]);
 
   // Auto-dismiss alert toast after 7s
   useEffect(() => {

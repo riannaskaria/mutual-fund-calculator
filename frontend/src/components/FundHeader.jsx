@@ -88,7 +88,7 @@ export default function FundHeader({ ticker, fundName, quote, quoteLoading, aler
                   <div style={{ fontSize: 22, fontWeight: 700, color: T.text, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
                     {price.toFixed(2)}
                   </div>
-                  {chg != null && (
+                  {chg != null && pct != null && (
                     <div style={{ fontSize: 12, fontWeight: 600, color: up ? T.positive : T.negative, marginTop: 4 }}>
                       {up ? '▲' : '▼'} {up ? '+' : ''}{chg.toFixed(2)} ({up ? '+' : ''}{pct.toFixed(2)}%)
                     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useT, TAG_COLORS, SOURCE_BRANDS } from '../theme';
 
 const NEWS_QUERIES = [
@@ -56,6 +56,7 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
   const [lastUpdated, setLastUpdated] = useState(null);
   const [query, setQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState(null);
+  const queryRef = useRef('');
 
   useEffect(() => {
     if (onArticlesUpdate) onArticlesUpdate(articles);
@@ -103,12 +104,13 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
 
   useEffect(() => {
     fetchNews();
-    const iv = setInterval(() => fetchNews(query), 600000);
+    const iv = setInterval(() => fetchNews(queryRef.current), 600000);
     return () => clearInterval(iv);
   }, []);
 
   const handleSearch = (val) => {
     setQuery(val);
+    queryRef.current = val;
     if (searchTimeout) clearTimeout(searchTimeout);
     setSearchTimeout(setTimeout(() => fetchNews(val.trim()), 500));
   };
@@ -185,7 +187,7 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
             style={{ background: 'none', border: 'none', outline: 'none', fontSize: 11, color: T.textSub, flex: 1, width: 0 }}
           />
           {query && (
-            <button onClick={() => { setQuery(''); fetchNews(''); }}
+            <button onClick={() => { setQuery(''); queryRef.current = ''; fetchNews(''); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMute, padding: 0, fontSize: 14, lineHeight: 1, display: 'flex' }}>×</button>
           )}
         </div>

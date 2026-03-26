@@ -154,10 +154,13 @@ router.post('/chat', async (req, res) => {
       ...messages,
     ];
 
-    // Agentic loop
-    while (true) {
+    // Agentic loop — capped at MAX_ITER to prevent runaway tool chains
+    const MAX_ITER = 8;
+    let iter = 0;
+    while (iter < MAX_ITER) {
+      iter++;
       const response = await getClient().chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
         tools: TOOLS,
         tool_choice: 'auto',
         messages: currentMessages,
@@ -168,6 +171,10 @@ router.post('/chat', async (req, res) => {
 
       if (!msg.tool_calls || msg.tool_calls.length === 0) {
         return res.json({ reply: msg.content || 'No response.' });
+      }
+
+      if (iter === MAX_ITER) {
+        return res.json({ reply: msg.content || 'Request required too many tool calls to complete.' });
       }
 
       // Execute all tool calls in parallel
