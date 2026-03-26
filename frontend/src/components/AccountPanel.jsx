@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useT } from '../theme';
 
 // ─── persistence helpers ──────────────────────────────────────────────────────
-const STORAGE_KEY       = 'mf_account_v1';
-const PROFILE_KEY       = 'mf_profile_v1';
-const PICTURE_KEY       = 'mf_profile_picture';
-const EMAIL_ALERTS_KEY  = 'mf_email_alerts_v1';
+const STORAGE_KEY = 'mf_account_v1';
+const PROFILE_KEY = 'mf_profile_v1';
+const PICTURE_KEY = 'mf_profile_picture';
+const EMAIL_ALERTS_KEY = 'mf_email_alerts_v1';
 
 function loadEmailAlerts() {
     try { return JSON.parse(localStorage.getItem(EMAIL_ALERTS_KEY) || '{"enabled":false,"email":""}'); }
@@ -146,7 +146,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     useEffect(() => { saveAccount(account); }, [account]);
     useEffect(() => { saveProfile(profile); }, [profile]);
     useEffect(() => {
-        try { localStorage.setItem(EMAIL_ALERTS_KEY, JSON.stringify(emailAlerts)); } catch {}
+        try { localStorage.setItem(EMAIL_ALERTS_KEY, JSON.stringify(emailAlerts)); } catch { }
     }, [emailAlerts]);
 
     useEffect(() => {
@@ -182,7 +182,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
         reader.onload = (ev) => {
             const b64 = ev.target.result;
             setCustomPicture(b64);
-            try { localStorage.setItem(PICTURE_KEY, b64); } catch {}
+            try { localStorage.setItem(PICTURE_KEY, b64); } catch { }
         };
         reader.readAsDataURL(file);
         e.target.value = '';
@@ -190,7 +190,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
 
     const removePicture = useCallback(() => {
         setCustomPicture(null);
-        try { localStorage.removeItem(PICTURE_KEY); } catch {}
+        try { localStorage.removeItem(PICTURE_KEY); } catch { }
     }, []);
 
     const startEditProfile = () => {
@@ -360,7 +360,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                 onMouseEnter={e => e.currentTarget.style.opacity = 1}
                                                 onMouseLeave={e => e.currentTarget.style.opacity = 0}>
                                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
                                                 </svg>
                                             </div>
                                         </div>
@@ -488,7 +488,12 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                     </div>
                                 </div>
 
-                                {/* Summary stats */}
+                            </div>
+                        )}
+
+                        {/* ── PORTFOLIO TAB ── */}
+                        {activeTab === 'Portfolio' && (
+                            <>
                                 <div>
                                     <SectionHeading>Portfolio Summary</SectionHeading>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -497,14 +502,8 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                         <StatCard label="Favorites" value={favSet.size} sub="saved" />
                                         <StatCard label="Alerts" value={alerts.filter(a => !a.triggered).length} sub="active" />
                                     </div>
-                                </div>
-                            </div>
-                        )}
+                                    <div style={{ marginBottom: 10 }}></div>
 
-                        {/* ── PORTFOLIO TAB ── */}
-                        {activeTab === 'Portfolio' && (
-                            <>
-                                <div>
                                     <SectionHeading>Log an Investment</SectionHeading>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
