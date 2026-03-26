@@ -67,7 +67,6 @@ export default function SettingsPanel({ open, onClose, theme, setTheme }) {
                 {[
                   { id: 'light', label: '☀ Light', bg: '#F7F7FA', fg: '#0d1520' },
                   { id: 'dark',  label: '◑ Dark',  bg: '#1e1e1e', fg: '#f0f2f4' },
-                  { id: 'black', label: '● Black', bg: '#000000', fg: '#f2f2f7' },
                 ].map(opt => (
                   <button key={opt.id} onClick={() => setTheme(opt.id)} style={{
                     flex: 1,
