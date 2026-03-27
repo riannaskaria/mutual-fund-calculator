@@ -9,6 +9,14 @@ import { getFundInformationRows } from '../data/fundInformation';
 
 const TABS = ['Price Chart', 'CAPM Calculator', 'Information'];
 
+const CONTRIB_FREQUENCIES = [
+  { id: 'weekly', label: 'Weekly', periodsPerYear: 52, suffix: '/wk' },
+  { id: 'monthly', label: 'Monthly', periodsPerYear: 12, suffix: '/mo' },
+  { id: 'quarterly', label: 'Quarterly', periodsPerYear: 4, suffix: '/qtr' },
+  { id: 'semiannual', label: 'Semiannual', periodsPerYear: 2, suffix: '/6mo' },
+  { id: 'annual', label: 'Annual', periodsPerYear: 1, suffix: '/yr' },
+];
+
 const PRICE_RANGES = [
   { label: '1W', range: '7d', interval: '1h' },
   { label: '1M', range: '1mo', interval: '1d' },
@@ -144,13 +152,23 @@ function PriceChart({ ticker, quote }) {
 
 function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculating, onCalculate, setInvestmentAmount, setYears, calcHistory }) {
   const T = useT();
-  const [monthlyContrib, setMonthlyContrib] = useState('');
+  const [advancedCapm, setAdvancedCapm] = useState(false);
+  const [recurringContrib, setRecurringContrib] = useState('');
+  const [contribFrequencyId, setContribFrequencyId] = useState('monthly');
+  const [ltcgRatePct, setLtcgRatePct] = useState('');
   const onCalculateRef = useRef(onCalculate);
   useEffect(() => { onCalculateRef.current = onCalculate; }, [onCalculate]);
 
   const principal = parseFloat(investmentAmount) || 10000;
   const yearsNum = parseFloat(years) || 10;
-  const monthly = parseFloat(monthlyContrib) || 0;
+  const freqMeta = CONTRIB_FREQUENCIES.find(f => f.id === contribFrequencyId) ?? CONTRIB_FREQUENCIES[1];
+  const periodsPerYear = freqMeta.periodsPerYear;
+  const pmt = advancedCapm ? (parseFloat(recurringContrib) || 0) : 0;
+
+  useEffect(() => {
+    setRecurringContrib('');
+    setContribFrequencyId('monthly');
+  }, [ticker]);
 
   // Auto-recalculate on input change
   useEffect(() => {
@@ -161,55 +179,85 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
     return () => clearTimeout(t);
   }, [investmentAmount, years, ticker]);
 
-  // ── derived values ──
-  const fv = futureValue?.futureValue ?? futureValue?.value ?? null;
-  const rf = (futureValue?.riskFreeRate ?? 0.0425) * 100;
-  const rm = (futureValue?.expectedReturnRate ?? 0) * 100;
-  const beta = futureValue?.beta ?? 0;
-  const rate = (futureValue?.capmRate ?? 0) * 100;
-  const rawRate = futureValue?.capmRate ?? 0;
-  const mRate = rawRate / 12;
-  const months = yearsNum * 12;
+  const DEFAULT_RF = 0.0425;
+  const effective = useMemo(() => {
+    if (!futureValue) return null;
+    return {
+      rf: futureValue.riskFreeRate ?? DEFAULT_RF,
+      beta: futureValue.beta ?? 0,
+      capmRate: futureValue.capmRate ?? 0,
+      fvLump: futureValue.futureValue ?? futureValue.value ?? null,
+    };
+  }, [futureValue]);
 
-  // SIP (monthly contribution) future value using discrete compounding
-  const fvSip = monthly > 0 && mRate > 0
-    ? monthly * ((Math.pow(1 + mRate, months) - 1) / mRate)
-    : 0;
+  // ── derived values ──
+  const fv = effective?.fvLump ?? null;
+  const rf = (effective?.rf ?? DEFAULT_RF) * 100;
+  const beta = effective?.beta ?? 0;
+  const rawRate = effective?.capmRate ?? 0;
+  const rate = rawRate * 100;
+  const periodRate = rawRate / periodsPerYear;
+  const nPeriods = yearsNum * periodsPerYear;
+
+  // Recurring contributions: ordinary annuity FV; if rate ≈ 0, FV is n × payment
+  const fvSip = pmt <= 0 ? 0
+    : periodRate > 1e-12
+      ? pmt * ((Math.pow(1 + periodRate, nPeriods) - 1) / periodRate)
+      : pmt * nPeriods;
   const totalFV = (fv ?? 0) + fvSip;
-  const totalContributed = principal + monthly * months;
+  const totalContributed = principal + pmt * nPeriods;
   const totalGain = totalFV > 0 ? totalFV - totalContributed : null;
   const totalGainPct = totalGain != null && totalContributed > 0 ? (totalGain / totalContributed) * 100 : null;
 
   // Rule of 72 — approximate years to double
   const doubleYears = rawRate > 0 ? Math.round(72 / (rawRate * 100)) : null;
 
-  // After-tax projected value (20% long-term capital gains)
-  const LTCG_RATE = 0.20;
+  // After-tax projected value — LTCG on gains only (editable when Additional parameters is on)
+  const DEFAULT_LTCG_DEC = 0.20;
+  const ltcgRateDecimal = (() => {
+    if (!advancedCapm) return DEFAULT_LTCG_DEC;
+    const t = String(ltcgRatePct).trim();
+    if (t === '') return DEFAULT_LTCG_DEC;
+    const n = parseFloat(t);
+    if (!Number.isFinite(n)) return DEFAULT_LTCG_DEC;
+    return Math.min(100, Math.max(0, n)) / 100;
+  })();
+  const ltcgHundredths = Math.round(ltcgRateDecimal * 10000) / 100;
+  const ltcgLabelPct = Number.isInteger(ltcgHundredths)
+    ? String(ltcgHundredths)
+    : ltcgHundredths.toFixed(2).replace(/\.?0+$/, '');
   const afterTaxFV = totalFV > 0 && totalGain != null && totalGain > 0
-    ? principal + totalGain * (1 - LTCG_RATE) : null;
+    ? principal + totalGain * (1 - ltcgRateDecimal) : null;
 
   // Alpha vs risk-free rate
   const alpha = rate - rf;
 
   // Build quarterly chart data (lump + SIP combined)
   const chartData = useMemo(() => {
-    if (!futureValue || !ticker) return [];
-    const r = futureValue.capmRate ?? 0.08;
-    const mr = r / 12;
-    const m = parseFloat(monthlyContrib) || 0;
+    if (!effective || !ticker) return [];
+    const r = effective.capmRate ?? 0.08;
+    const iPer = r / periodsPerYear;
     const points = [];
-    for (let i = 0; i <= Math.ceil(yearsNum) * 4; i++) {
-      const t = i / 4;
+    for (let j = 0; j <= Math.ceil(yearsNum) * 4; j++) {
+      const t = j / 4;
       if (t > yearsNum + 0.01) break;
       const lump = principal * Math.exp(r * t);
-      const sipM = t * 12;
-      const sip = m > 0 && mr > 0 ? m * ((Math.pow(1 + mr, sipM) - 1) / mr) : 0;
+      const n = t * periodsPerYear;
+      const sip = pmt <= 0 ? 0
+        : iPer > 1e-12
+          ? pmt * ((Math.pow(1 + iPer, n) - 1) / iPer)
+          : pmt * n;
       points.push({ quarter: t, value: Math.round((lump + sip) * 100) / 100 });
     }
     return points;
-  }, [futureValue, principal, yearsNum, ticker, monthlyContrib]);
+  }, [effective, principal, yearsNum, ticker, periodsPerYear, pmt]);
 
   const pillInput = { background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 9999, padding: '9px 16px', fontSize: 13, color: T.text, outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' };
+
+  const switchStyle = {
+    width: 36, height: 20, borderRadius: 9999, border: 'none', cursor: 'pointer', position: 'relative',
+    background: advancedCapm ? T.accent : T.border, transition: 'background 0.18s', flexShrink: 0,
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
@@ -231,16 +279,84 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
             onBlur={e => e.target.style.borderColor = T.border}
           />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 10, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, paddingLeft: 4 }}>Monthly SIP ($)</label>
-          <input type="number" value={monthlyContrib} onChange={e => setMonthlyContrib(e.target.value)}
-            placeholder="0" min={0} step={10} style={{ ...pillInput, width: 110 }}
-            onFocus={e => e.target.style.borderColor = T.focusRing}
-            onBlur={e => e.target.style.borderColor = T.border}
-          />
-        </div>
       </div>
 
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={advancedCapm}
+            aria-label="Toggle additional parameters (recurring contributions and LTCG rate)"
+            onClick={() => setAdvancedCapm(v => !v)}
+            style={switchStyle}
+          >
+            <span style={{
+              position: 'absolute', top: 2, left: advancedCapm ? 18 : 2,
+              width: 16, height: 16, borderRadius: '50%', background: '#fff',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.18s',
+            }} />
+          </button>
+          <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>Additional parameters</span>
+          <span style={{ fontSize: 10, color: T.textFaint }}>Optional</span>
+        </div>
+        {advancedCapm && (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 10,
+            alignItems: 'flex-end',
+            padding: 12,
+            background: T.cardBg,
+            border: `1px solid ${T.border}`,
+            borderRadius: 10,
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Amount ($)</label>
+              <input type="number" value={recurringContrib} onChange={e => setRecurringContrib(e.target.value)}
+                placeholder="0" min={0} step={10} style={{ ...pillInput, width: 140, borderRadius: 8 }}
+                onFocus={e => e.target.style.borderColor = T.focusRing}
+                onBlur={e => e.target.style.borderColor = T.border}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Frequency</label>
+              <select
+                value={contribFrequencyId}
+                onChange={e => setContribFrequencyId(e.target.value)}
+                style={{
+                  ...pillInput,
+                  minWidth: 140,
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  backgroundImage: `linear-gradient(45deg, transparent 50%, ${T.textMute} 50%), linear-gradient(135deg, ${T.textMute} 50%, transparent 50%)`,
+                  backgroundPosition: 'calc(100% - 14px) 55%, calc(100% - 9px) 55%',
+                  backgroundSize: '5px 4px, 5px 4px',
+                  backgroundRepeat: 'no-repeat',
+                  paddingRight: 28,
+                }}
+              >
+                {CONTRIB_FREQUENCIES.map(f => (
+                  <option key={f.id} value={f.id}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>LTCG rate %</label>
+              <input type="number" value={ltcgRatePct} onChange={e => setLtcgRatePct(e.target.value)}
+                placeholder="20" min={0} max={100} step={0.5} style={{ ...pillInput, width: 88, borderRadius: 8 }}
+                onFocus={e => e.target.style.borderColor = T.focusRing}
+                onBlur={e => e.target.style.borderColor = T.border}
+              />
+            </div>
+            <div style={{ flex: '1 1 220px', fontSize: 10, color: T.textFaint, lineHeight: 1.45, paddingBottom: 2 }}>
+              Initial balance compounds continuously; each deposit uses the periodic rate <span style={{ color: T.textMute, fontWeight: 600 }}>(CAPM ÷ periods per year)</span>.
+              After-tax figure taxes total gain only at the LTCG rate (empty field = 20%).
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Results ── */}
       {fv != null && chartData.length > 0 ? (
@@ -248,7 +364,12 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
           {/* Projection header — mirrors Price Chart header row */}
           <div style={{ flexShrink: 0 }}>
             <div style={{ fontSize: 10, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600, marginBottom: 6 }}>
-              Projected after {yearsNum}yr{monthly > 0 ? ` · +$${monthly.toLocaleString()}/mo SIP` : ''}
+              Projected after {yearsNum}yr
+              {pmt > 0 && (
+                <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: '0' }}>
+                  {' '}· +${pmt.toLocaleString()}{freqMeta.suffix}
+                </span>
+              )}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -281,7 +402,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
             {afterTaxFV != null && (
               <div style={{ marginTop: 4, fontSize: 11, color: T.textFaint }}>
                 After-tax: <span style={{ fontWeight: 600, color: T.textMute }}>{fmtMoneyFull(afterTaxFV)}</span>
-                <span style={{ marginLeft: 5 }}>20% LTCG applied to gains</span>
+                <span style={{ marginLeft: 5 }}>{ltcgLabelPct}% LTCG applied to gains{!advancedCapm ? ' (default)' : ''}</span>
               </div>
             )}
           </div>
@@ -325,7 +446,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
 
           {/* CAPM params — matches Price Chart footer style */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {[
                 { label: 'Beta', value: beta.toFixed(3) },
                 { label: 'Risk-Free Rate', value: `${rf.toFixed(2)}%` },
