@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useT, TAG_COLORS, SOURCE_BRANDS } from '../theme';
+import API_BASE from '../apiBase';
 
 const NEWS_QUERIES = [
   'mutual funds investing',
@@ -73,7 +74,7 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
 
       const allResults = await Promise.all(
         queries.map(q =>
-          fetch(`/google-news-rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en${bust}`, {
+          fetch(`${API_BASE}/google-news-rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en${bust}`, {
             signal: AbortSignal.timeout(8000),
           })
             .then(r => r.text())

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useT } from '../theme';
+import API_BASE from '../apiBase';
 
 // ─── persistence helpers ──────────────────────────────────────────────────────
 const STORAGE_KEY = 'mf_account_v1';
@@ -166,7 +167,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
         setTestStatus('sending');
         setTestError('');
         try {
-            const r = await fetch('/api/email/test', {
+            const r = await fetch(`${API_BASE}/api/email/test`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ to }),

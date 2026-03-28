@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { GS_BRAND, FONT_UI } from "../theme";
+import API_BASE from '../apiBase';
 
 const GLASS = {
     background: "rgba(255,255,255,0.45)",
@@ -93,11 +94,7 @@ export default function Sidebar({ isOpen, onToggle }) {
         if (!customFund.ticker) return;
         setApiLoading(true);
         try {
-            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${customFund.ticker.toUpperCase()}?range=1y&interval=1mo`;
-            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const proxyUrl = isDev
-                ? `/yahoo-api/v8/finance/chart/${customFund.ticker.toUpperCase()}?range=1y&interval=1mo`
-                : `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+            const proxyUrl = `${API_BASE}/yahoo-api/v8/finance/chart/${customFund.ticker.toUpperCase()}?range=1y&interval=1mo`;
             // Setup timeout to prevent hanging
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 6000);
@@ -266,14 +263,10 @@ export default function Sidebar({ isOpen, onToggle }) {
     const fetchNews = async (searchTerm) => {
         setNewsLoading(true);
         try {
-            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const query = searchTerm
                 ? encodeURIComponent(searchTerm + " finance OR market OR stock")
                 : "mutual+funds+OR+stock+market+OR+investing+OR+ETF";
-            const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
-            const fetchUrl = isDev
-                ? `/google-news-rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`
-                : `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
+            const fetchUrl = `${API_BASE}/google-news-rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000);

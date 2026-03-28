@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useT, MARKET_INDICES } from '../theme';
+import API_BASE from '../apiBase';
 
 function TickerItem({ t }) {
   const T = useT();
@@ -26,7 +27,7 @@ export default function TickerBar() {
     const load = () => {
       Promise.all(
         MARKET_INDICES.map(({ sym, yahoo }) =>
-          fetch(`/yahoo-api/v8/finance/chart/${yahoo}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) })
+          fetch(`${API_BASE}/yahoo-api/v8/finance/chart/${yahoo}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) })
             .then(r => r.json())
             .then(j => {
               const meta = j?.chart?.result?.[0]?.meta;

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useT } from '../theme';
+import API_BASE from '../apiBase';
 
 const CHAT_KEY = 'mf_bot_chat_v1';
 
@@ -141,7 +142,7 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
     setThinking(true);
 
     try {
-      const res = await fetch('/api/bot/chat', {
+      const res = await fetch(`${API_BASE}/api/bot/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

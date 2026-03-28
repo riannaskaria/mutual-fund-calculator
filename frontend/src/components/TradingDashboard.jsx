@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { THEMES, ThemeCtx, CAPM_SUPPORTED, getFundTicker, getFundBaseName, FONT_UI } from '../theme';
 import { fetchFutureValue, fetchYahooQuote } from '../api/mutualFundApi';
+import API_BASE from '../apiBase';
 
 import TickerBar from './TickerBar';
 import PositionsPanel from './PositionsPanel';
@@ -144,7 +145,7 @@ export default function TradingDashboard() {
     const tickers = [...CAPM_SUPPORTED, ...extra].filter(t => !hidden.has(t));
     Promise.all(
       tickers.map(sym =>
-        fetch(`/yahoo-api/v8/finance/chart/${sym}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) })
+        fetch(`${API_BASE}/yahoo-api/v8/finance/chart/${sym}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) })
           .then(r => r.json())
           .then(j => {
             const meta = j?.chart?.result?.[0]?.meta;
@@ -187,7 +188,7 @@ export default function TradingDashboard() {
             if (emailCfg.enabled && to) {
               triggered.forEach(alert => {
                 const fund = results.find(f => f?.id === alert.ticker);
-                fetch('/api/email/send-alert', {
+                fetch(`${API_BASE}/api/email/send-alert`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -219,7 +220,7 @@ export default function TradingDashboard() {
       return next;
     });
     if (!CAPM_SUPPORTED.has(t)) {
-      const j = await fetch(`/yahoo-api/v8/finance/chart/${t}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) }).then(r => r.json());
+      const j = await fetch(`${API_BASE}/yahoo-api/v8/finance/chart/${t}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) }).then(r => r.json());
       const meta = j?.chart?.result?.[0]?.meta;
       if (!meta?.symbol) throw new Error(`"${t}" not found on Yahoo Finance`);
       setCustomTickers(prev => {
@@ -335,7 +336,7 @@ export default function TradingDashboard() {
     } catch {
       // Client-side CAPM fallback when backend is unavailable
       try {
-        const hist = await fetch(`/yahoo-api/v8/finance/chart/${fund.id}?interval=1mo&range=1y`)
+        const hist = await fetch(`${API_BASE}/yahoo-api/v8/finance/chart/${fund.id}?interval=1mo&range=1y`)
           .then(r => r.json());
         const closes = hist?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean) ?? [];
         let expectedReturn = 0.08;
