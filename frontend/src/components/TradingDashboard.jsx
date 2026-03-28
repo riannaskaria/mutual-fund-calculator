@@ -93,6 +93,7 @@ function TopBar({ onSettings, onAccount }) {
 }
 
 export default function TradingDashboard() {
+  const [contentIn, setContentIn] = useState(false);
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -129,6 +130,11 @@ export default function TradingDashboard() {
     catch { return new Set(); }
   });
   const T = THEMES[theme];
+
+  useEffect(() => {
+    const t = setTimeout(() => setContentIn(true), 80);
+    return () => clearTimeout(t);
+  }, []);
 
   // Fetch all fund prices (called on mount + every 15s)
   const fetchAllPrices = useCallback(() => {
@@ -240,7 +246,17 @@ export default function TradingDashboard() {
         return next;
       });
     }
-    setFunds(prev => prev.filter(f => f.id !== sym));
+    setFunds(prev => {
+      const removedIdx = prev.findIndex(f => f.id === sym);
+      if (removedIdx !== -1) {
+        setSelectedIdx(cur => {
+          if (removedIdx < cur) return cur - 1;
+          if (removedIdx === cur) return Math.max(0, Math.min(cur, prev.length - 2));
+          return cur;
+        });
+      }
+      return prev.filter(f => f.id !== sym);
+    });
   }, [customTickers]);
 
   useEffect(() => {
@@ -369,7 +385,12 @@ export default function TradingDashboard() {
       <div style={{ height: '100vh', background: T.pageBg, display: 'flex', flexDirection: 'column', fontFamily: FONT_UI, overflow: 'hidden' }}>
         <TickerBar />
         <TopBar onSettings={() => setSettingsOpen(true)} onAccount={() => setAccountOpen(true)} />
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0, gap: 8, padding: '6px 8px 8px' }}>
+        <div style={{
+          flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0, gap: 8, padding: '6px 8px 8px',
+          opacity: contentIn ? 1 : 0,
+          transform: contentIn ? 'translateY(0)' : 'translateY(-28px)',
+          transition: 'opacity 0.5s ease, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}>
           <PositionsPanel
             funds={funds}
             selectedIdx={selectedIdx}

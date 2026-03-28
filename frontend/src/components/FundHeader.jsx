@@ -14,13 +14,17 @@ export default function FundHeader({ ticker, fundName, quote, quoteLoading, aler
   const [alertPrice, setAlertPrice] = useState('');
   const [alertDir, setAlertDir] = useState('above');
   const [popoverPos, setPopoverPos] = useState({ top: 0, right: 0 });
-  const bellRef = useRef(null);
+  const bellRef    = useRef(null);
+  const popoverRef = useRef(null);
 
-  // Close on outside click
+  // Close on outside click — must check both the bell button AND the portal popover
+  // (the portal renders into document.body, outside bellRef's DOM subtree)
   useEffect(() => {
     if (!alertOpen) return;
     const handler = (e) => {
-      if (bellRef.current && !bellRef.current.contains(e.target)) setAlertOpen(false);
+      const inBell    = bellRef.current    && bellRef.current.contains(e.target);
+      const inPopover = popoverRef.current && popoverRef.current.contains(e.target);
+      if (!inBell && !inPopover) setAlertOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -132,7 +136,7 @@ export default function FundHeader({ ticker, fundName, quote, quoteLoading, aler
 
                 {/* Alert popover — rendered into document.body via portal to escape all stacking contexts */}
                 {alertOpen && createPortal(
-                  <div style={{
+                  <div ref={popoverRef} style={{
                     position: 'fixed', top: popoverPos.top, right: popoverPos.right, zIndex: 9999,
                     width: 296,
                     background: T.glassPanel || T.panelBg,

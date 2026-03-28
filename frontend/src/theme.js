@@ -21,6 +21,7 @@ export const THEMES = {
   dark: {
     pageBg: '#0f1117',
     panelBg: '#161b24',
+    solidPanel: '#161b24',
     cardBg: '#1c2230',
     inputBg: '#232b38',
     border: 'rgba(255,255,255,0.08)',
@@ -48,6 +49,7 @@ export const THEMES = {
   light: {
     pageBg: '#EEF2F8',
     panelBg: 'rgba(255,255,255,0.88)',
+    solidPanel: '#ffffff',
     cardBg: 'rgba(255,255,255,0.92)',
     inputBg: 'rgba(240,244,248,0.90)',
     border: 'rgba(180,195,215,0.55)',
@@ -75,6 +77,7 @@ export const THEMES = {
   black: {
     pageBg: '#000000',
     panelBg: 'rgba(14,14,14,0.96)',
+    solidPanel: '#0e0e0e',
     cardBg: 'rgba(22,22,22,0.98)',
     inputBg: '#1c1c1e',
     border: 'rgba(255,255,255,0.09)',

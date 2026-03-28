@@ -228,7 +228,7 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
         <div style={{
           position: 'fixed', bottom: 84, right: 24, zIndex: 999,
           width: 390, maxHeight: 580,
-          background: T.panelBg, border: `1px solid ${T.border}`,
+          background: T.solidPanel || T.panelBg, border: `1px solid ${T.border}`,
           borderRadius: 14, boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>

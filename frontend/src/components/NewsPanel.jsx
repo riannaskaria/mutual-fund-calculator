@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useT, TAG_COLORS, SOURCE_BRANDS } from '../theme';
 
 const NEWS_QUERIES = [
@@ -55,7 +55,7 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [query, setQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState(null);
+  const searchTimeoutRef = useRef(null);
   const queryRef = useRef('');
 
   useEffect(() => {
@@ -108,12 +108,12 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
     return () => clearInterval(iv);
   }, []);
 
-  const handleSearch = (val) => {
+  const handleSearch = useCallback((val) => {
     setQuery(val);
     queryRef.current = val;
-    if (searchTimeout) clearTimeout(searchTimeout);
-    setSearchTimeout(setTimeout(() => fetchNews(val.trim()), 500));
-  };
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => fetchNews(val.trim()), 500);
+  }, []);
 
   if (collapsed) {
     return (

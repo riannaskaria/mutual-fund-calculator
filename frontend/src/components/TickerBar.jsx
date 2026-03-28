@@ -26,7 +26,7 @@ export default function TickerBar() {
     const load = () => {
       Promise.all(
         MARKET_INDICES.map(({ sym, yahoo }) =>
-          fetch(`/yahoo-api/v8/finance/chart/${yahoo}?interval=1d&range=1d`)
+          fetch(`/yahoo-api/v8/finance/chart/${yahoo}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) })
             .then(r => r.json())
             .then(j => {
               const meta = j?.chart?.result?.[0]?.meta;

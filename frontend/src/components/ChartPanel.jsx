@@ -227,7 +227,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
     ? String(ltcgHundredths)
     : ltcgHundredths.toFixed(2).replace(/\.?0+$/, '');
   const afterTaxFV = totalFV > 0 && totalGain != null && totalGain > 0
-    ? principal + totalGain * (1 - ltcgRateDecimal) : null;
+    ? totalContributed + totalGain * (1 - ltcgRateDecimal) : null;
 
   // Alpha vs risk-free rate
   const alpha = rate - rf;
@@ -387,7 +387,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
                   <div>
                     <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Total Gain</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: totalGain >= 0 ? T.positive : T.negative }}>
-                      +{fmtMoney(totalGain)}
+                      {totalGain >= 0 ? '+' : ''}{fmtMoney(totalGain)}
                     </div>
                     <div style={{ fontSize: 10, color: T.textMute }}>{totalGainPct?.toFixed(1)}%</div>
                   </div>

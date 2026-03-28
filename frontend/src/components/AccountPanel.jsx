@@ -139,7 +139,8 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
         try { return localStorage.getItem(PICTURE_KEY) || null; } catch { return null; }
     });
     const [emailAlerts, setEmailAlerts] = useState(loadEmailAlerts);
-    const [testStatus, setTestStatus] = useState(null); // null | 'sending' | 'ok' | 'error'
+    const [testStatus, setTestStatus] = useState(null); // null | 'sending' | 'ok' | 'error' | 'unconfigured'
+    const [testError, setTestError] = useState('');
     const overlayRef = useRef();
     const pictureInputRef = useRef(null);
 
@@ -163,6 +164,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
         const to = emailAlerts.email || profile.email;
         if (!to) return;
         setTestStatus('sending');
+        setTestError('');
         try {
             const r = await fetch('/api/email/test', {
                 method: 'POST',
@@ -170,9 +172,22 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                 body: JSON.stringify({ to }),
             });
             const data = await r.json();
-            setTestStatus(data.ok ? 'ok' : 'error');
-        } catch { setTestStatus('error'); }
-        setTimeout(() => setTestStatus(null), 4000);
+            if (data.ok) {
+                setTestStatus('ok');
+                setTimeout(() => setTestStatus(null), 5000);
+            } else if (data.unconfigured) {
+                setTestStatus('unconfigured');
+                setTestError(data.error || 'SMTP not configured');
+            } else {
+                setTestStatus('error');
+                setTestError(data.error || 'Unknown error');
+                setTimeout(() => setTestStatus(null), 6000);
+            }
+        } catch (err) {
+            setTestStatus('error');
+            setTestError('Could not reach the backend. Is it running?');
+            setTimeout(() => setTestStatus(null), 6000);
+        }
     }, [emailAlerts.email, profile.email]);
 
     const handlePictureUpload = useCallback((e) => {
@@ -200,9 +215,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     };
 
     const saveProfileEdit = () => {
-        const updated = { name: draftName.trim(), email: draftEmail.trim() };
-        setProfile(updated);
-        saveProfile(updated);
+        setProfile({ name: draftName.trim(), email: draftEmail.trim() });
         setEditingProfile(false);
     };
 
@@ -468,23 +481,48 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                 onClick={sendTestEmail}
                                                 disabled={testStatus === 'sending' || (!emailAlerts.email && !profile.email)}
                                                 style={{
-                                                    background: testStatus === 'ok' ? T.positive : testStatus === 'error' ? T.negative : T.accent,
+                                                    background: testStatus === 'ok' ? T.positive : (testStatus === 'error' || testStatus === 'unconfigured') ? T.negative : T.accent,
                                                     color: '#fff', border: 'none', borderRadius: 7,
-                                                    padding: '8px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                                    opacity: testStatus === 'sending' || (!emailAlerts.email && !profile.email) ? 0.6 : 1,
+                                                    padding: '8px 18px', fontSize: 12, fontWeight: 600,
+                                                    cursor: (testStatus === 'sending' || (!emailAlerts.email && !profile.email)) ? 'not-allowed' : 'pointer',
+                                                    opacity: (testStatus === 'sending' || (!emailAlerts.email && !profile.email)) ? 0.6 : 1,
+                                                    display: 'flex', alignItems: 'center', gap: 7,
                                                     transition: 'background 0.2s',
                                                 }}
                                             >
-                                                {testStatus === 'sending' ? 'Sending…' : testStatus === 'ok' ? 'Sent!' : testStatus === 'error' ? 'Failed' : 'Send test email'}
+                                                {testStatus === 'sending' && (
+                                                    <div style={{ width: 10, height: 10, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+                                                )}
+                                                {testStatus === 'sending' ? 'Sending…'
+                                                    : testStatus === 'ok' ? '✓ Sent!'
+                                                    : (testStatus === 'error' || testStatus === 'unconfigured') ? 'Failed'
+                                                    : 'Send test email'}
                                             </button>
                                             {!emailAlerts.email && !profile.email && (
                                                 <span style={{ fontSize: 11, color: T.textFaint, fontStyle: 'italic' }}>Set an email above first</span>
                                             )}
                                         </div>
 
-                                        <div style={{ fontSize: 10, color: T.textFaint, lineHeight: 1.5 }}>
-                                            Requires SMTP configured in backend/.env (SMTP_USER + SMTP_PASS).
-                                        </div>
+                                        {/* Status feedback */}
+                                        {testStatus === 'ok' && (
+                                            <div style={{ background: `${T.positive}14`, border: `1px solid ${T.positive}40`, borderRadius: 8, padding: '10px 14px', fontSize: 12, color: T.positive, lineHeight: 1.5 }}>
+                                                <strong>Email sent!</strong> Check your inbox at <em>{emailAlerts.email || profile.email}</em>.
+                                            </div>
+                                        )}
+                                        {testStatus === 'unconfigured' && (
+                                            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
+                                                <strong style={{ display: 'block', marginBottom: 4 }}>SMTP not configured</strong>
+                                                Open <code style={{ background: '#fde68a', padding: '1px 5px', borderRadius: 3, fontSize: 11 }}>backend/.env</code> and fill in{' '}
+                                                <code style={{ background: '#fde68a', padding: '1px 5px', borderRadius: 3, fontSize: 11 }}>SMTP_USER</code> and{' '}
+                                                <code style={{ background: '#fde68a', padding: '1px 5px', borderRadius: 3, fontSize: 11 }}>SMTP_PASS</code>, then restart the backend.
+                                            </div>
+                                        )}
+                                        {testStatus === 'error' && testError && (
+                                            <div style={{ background: `${T.negative}12`, border: `1px solid ${T.negative}40`, borderRadius: 8, padding: '10px 14px', fontSize: 12, color: T.negative, lineHeight: 1.5 }}>
+                                                <strong>Send failed:</strong> {testError}
+                                            </div>
+                                        )}
+
                                     </div>
                                 </div>
 
