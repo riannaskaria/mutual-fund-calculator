@@ -122,7 +122,7 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
         onClick={onToggle}
         title="Show news"
         style={{
-          width: 32, background: T.accent, border: `1px solid ${T.accent}`, borderRadius: 14,
+          width: 42, background: T.accent, border: `1px solid ${T.accent}`, borderRadius: 14,
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           paddingTop: 14, gap: 10, flexShrink: 0, cursor: 'pointer',
           transition: 'opacity 0.15s', overflow: 'hidden', opacity: 0.85,
