@@ -129,6 +129,10 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     const T = useT();
     const [account, setAccount] = useState(loadAccount);
     const [profile, setProfile] = useState(loadProfile);
+    const [savedProjections, setSavedProjections] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('mf_calc_history_v1')) || []; }
+        catch { return []; }
+    });
     const [editingProfile, setEditingProfile] = useState(false);
     const [draftName, setDraftName] = useState('');
     const [draftEmail, setDraftEmail] = useState('');
@@ -146,6 +150,18 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     const pictureInputRef = useRef(null);
 
     useEffect(() => { saveAccount(account); }, [account]);
+
+    // Sync savedProjections when ChartPanel saves/deletes entries
+    useEffect(() => {
+        function onStorage(e) {
+            if (e.key === 'mf_calc_history_v1') {
+                try { setSavedProjections(JSON.parse(e.newValue) || []); }
+                catch { setSavedProjections([]); }
+            }
+        }
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
     useEffect(() => { saveProfile(profile); }, [profile]);
     useEffect(() => {
         try { localStorage.setItem(EMAIL_ALERTS_KEY, JSON.stringify(emailAlerts)); } catch { }
@@ -345,7 +361,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
 
                     {/* tabs */}
                     <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0, padding: '0 8px' }}>
-                        {['Profile', 'Portfolio', 'Favorites', 'Alerts', 'History'].map(t => (
+                        {['Profile', 'Portfolio', 'Favorites', 'Alerts', 'History', 'Projections'].map(t => (
                             <button key={t} onClick={() => setActiveTab(t)} style={tabBtn(t)}>{t}</button>
                         ))}
                     </div>
@@ -803,6 +819,100 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                             <div style={{ fontSize: 13, fontWeight: 700, color: T.positive, flexShrink: 0 }}>{fmt$(h.amount)}</div>
                                         </div>
                                     ))
+                                }
+                            </div>
+                        )}
+                        {/* ── PROJECTIONS TAB ── */}
+                        {activeTab === 'Projections' && (
+                            <div>
+                                {savedProjections.length === 0
+                                    ? <EmptyState text="No saved projections yet. Use the CAPM Calculator to save a projection." />
+                                    : (
+                                        <>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                                <SectionHeading>Saved Projections</SectionHeading>
+                                                <button onClick={() => {
+                                                    localStorage.removeItem('mf_calc_history_v1');
+                                                    window.dispatchEvent(new StorageEvent('storage', { key: 'mf_calc_history_v1', newValue: '[]' }));
+                                                    setSavedProjections([]);
+                                                }} style={{
+                                                    background: 'none', border: `1px solid ${T.border}`, borderRadius: 6,
+                                                    padding: '3px 10px', fontSize: 10, color: T.textMute, cursor: 'pointer',
+                                                }}>Clear All</button>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                {savedProjections.map(p => {
+                                                    const fv = p.totalFV;
+                                                    const gain = p.totalGain;
+                                                    const gainPct = p.totalGainPct;
+                                                    return (
+                                                        <div key={p.id} style={{
+                                                            background: T.cardBg, border: `1px solid ${T.border}`,
+                                                            borderRadius: 10, padding: '12px 14px',
+                                                            display: 'flex', flexDirection: 'column', gap: 6,
+                                                        }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                    <div style={{
+                                                                        width: 28, height: 28, borderRadius: 5,
+                                                                        background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                        fontSize: 8, color: '#fff', fontWeight: 700, flexShrink: 0,
+                                                                    }}>{p.ticker?.slice(0, 3)}</div>
+                                                                    <div>
+                                                                        <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{p.ticker}</div>
+                                                                        <div style={{ fontSize: 10, color: T.textMute }}>{fmtDate(p.savedAt)}</div>
+                                                                    </div>
+                                                                </div>
+                                                                <button onClick={() => {
+                                                                    const next = savedProjections.filter(x => x.id !== p.id);
+                                                                    localStorage.setItem('mf_calc_history_v1', JSON.stringify(next));
+                                                                    window.dispatchEvent(new StorageEvent('storage', { key: 'mf_calc_history_v1', newValue: JSON.stringify(next) }));
+                                                                    setSavedProjections(next);
+                                                                }} style={{
+                                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                                    color: T.textFaint, fontSize: 14, padding: '0 2px',
+                                                                }}>✕</button>
+                                                            </div>
+                                                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                                                <div style={{ background: T.inputBg, borderRadius: 6, padding: '5px 10px' }}>
+                                                                    <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Principal</div>
+                                                                    <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{fmt$(p.principal)}</div>
+                                                                </div>
+                                                                <div style={{ background: T.inputBg, borderRadius: 6, padding: '5px 10px' }}>
+                                                                    <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Years</div>
+                                                                    <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{p.years}yr</div>
+                                                                </div>
+                                                                <div style={{ background: T.inputBg, borderRadius: 6, padding: '5px 10px' }}>
+                                                                    <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CAPM Rate</div>
+                                                                    <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{p.rate?.toFixed(2)}%</div>
+                                                                </div>
+                                                                {p.pmt > 0 && (
+                                                                    <div style={{ background: T.inputBg, borderRadius: 6, padding: '5px 10px' }}>
+                                                                        <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recurring</div>
+                                                                        <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{fmt$(p.pmt)}/{p.freqId?.replace('ly', '')}</div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
+                                                                <div>
+                                                                    <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Projected Value</div>
+                                                                    <div style={{ fontSize: 18, fontWeight: 700, color: T.positive }}>{fmt$(fv)}</div>
+                                                                </div>
+                                                                {gain != null && (
+                                                                    <div style={{ textAlign: 'right' }}>
+                                                                        <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Total Gain</div>
+                                                                        <div style={{ fontSize: 13, fontWeight: 700, color: T.positive }}>+{fmt$(gain)}</div>
+                                                                        <div style={{ fontSize: 10, color: T.textMute }}>{gainPct?.toFixed(1)}%</div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
+                                    )
                                 }
                             </div>
                         )}

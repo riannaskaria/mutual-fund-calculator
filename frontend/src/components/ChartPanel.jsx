@@ -166,6 +166,25 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
   const onCalculateRef = useRef(onCalculate);
   useEffect(() => { onCalculateRef.current = onCalculate; }, [onCalculate]);
 
+  // Cleanup justSaved timeout properly
+  useEffect(() => {
+    if (!justSaved) return;
+    const t = setTimeout(() => setJustSaved(false), 1800);
+    return () => clearTimeout(t);
+  }, [justSaved]);
+
+  // Sync savedCalcs if another component (AccountPanel) modifies localStorage
+  useEffect(() => {
+    function onStorage(e) {
+      if (e.key === CALC_HISTORY_KEY) {
+        try { setSavedCalcs(JSON.parse(e.newValue) || []); }
+        catch { setSavedCalcs([]); }
+      }
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const principal = parseFloat(investmentAmount) || 10000;
   const yearsNum = parseFloat(years) || 10;
   const freqMeta = CONTRIB_FREQUENCIES.find(f => f.id === contribFrequencyId) ?? CONTRIB_FREQUENCIES[1];
@@ -258,7 +277,6 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
     setSavedCalcs(next);
     localStorage.setItem(CALC_HISTORY_KEY, JSON.stringify(next));
     setJustSaved(true);
-    setTimeout(() => setJustSaved(false), 1800);
   }
 
   function deleteProjection(id) {

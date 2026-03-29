@@ -122,18 +122,18 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
         onClick={onToggle}
         title="Show news"
         style={{
-          width: 28, background: T.newsItemBg, border: `1px solid ${T.border}`, borderRadius: 14,
+          width: 32, background: T.accent, border: `1px solid ${T.accent}`, borderRadius: 14,
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           paddingTop: 14, gap: 10, flexShrink: 0, cursor: 'pointer',
-          transition: 'background 0.15s', overflow: 'hidden',
+          transition: 'opacity 0.15s', overflow: 'hidden', opacity: 0.85,
         }}
-        onMouseEnter={e => e.currentTarget.style.background = T.hover}
-        onMouseLeave={e => e.currentTarget.style.background = T.newsItemBg}
+        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6" />
         </svg>
-        <span style={{ fontSize: 9, color: T.textMute, writingMode: 'vertical-rl', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
+        <span style={{ fontSize: 9, color: '#fff', writingMode: 'vertical-rl', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700 }}>
           News{articles.length > 0 ? ` · ${articles.length}` : ''}
         </span>
       </div>
@@ -155,10 +155,10 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <button onClick={onToggle} title="Hide news"
-          style={{ background: 'none', border: `1px solid ${T.border2}`, borderRadius: 5, cursor: 'pointer', padding: '4px 5px', display: 'flex', alignItems: 'center' }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = T.borderSub}
-          onMouseLeave={e => e.currentTarget.style.borderColor = T.border2}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.textMute} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          style={{ background: T.accent, border: 'none', borderRadius: 5, cursor: 'pointer', padding: '4px 5px', display: 'flex', alignItems: 'center', opacity: 0.8, transition: 'opacity 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '0.8'}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </button>
