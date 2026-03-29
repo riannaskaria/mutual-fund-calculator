@@ -48,9 +48,12 @@ function isConfigured() {
 
 async function sendEmail({ to, subject, html, text }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const from = process.env.SMTP_FROM || 'Fund Dashboard <onboarding@resend.dev>';
-  const { error } = await resend.emails.send({ from, to, subject, html, text });
-  if (error) throw new Error(error.message);
+  // Resend free tier only allows sending from onboarding@resend.dev unless a domain is verified
+  const from = 'Fund Dashboard <onboarding@resend.dev>';
+  console.log('[sendEmail] sending from:', from, 'to:', to);
+  const result = await resend.emails.send({ from, to, subject, html, text });
+  console.log('[sendEmail] result:', JSON.stringify(result));
+  if (result.error) throw new Error(result.error.message);
 }
 
 function backendUrl() {
