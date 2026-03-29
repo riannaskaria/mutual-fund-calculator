@@ -13,7 +13,6 @@
 
 const express = require('express');
 const router  = express.Router();
-const Brevo   = require('@getbrevo/brevo');
 const fs   = require('fs');
 const path = require('path');
 
@@ -46,19 +45,26 @@ function isConfigured() {
 }
 
 async function sendEmail({ to, subject, html, text }) {
-  const apiInstance = new Brevo.TransactionalEmailsApi();
-  apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
-
-  const sendSmtpEmail = new Brevo.SendSmtpEmail();
-  sendSmtpEmail.sender = { name: 'Fund Dashboard', email: process.env.BREVO_SENDER_EMAIL || 'joaol.olivsilva@gmail.com' };
-  sendSmtpEmail.to = [{ email: to }];
-  sendSmtpEmail.subject = subject;
-  sendSmtpEmail.htmlContent = html;
-  sendSmtpEmail.textContent = text;
-
+  const from = process.env.BREVO_SENDER_EMAIL || 'joaol.olivsilva@gmail.com';
   console.log('[sendEmail] sending to:', to);
-  const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-  console.log('[sendEmail] success, messageId:', result.body?.messageId);
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: 'Fund Dashboard', email: from },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    }),
+  });
+  const data = await res.json();
+  console.log('[sendEmail] response:', JSON.stringify(data));
+  if (!res.ok) throw new Error(data.message || 'Brevo API error');
 }
 
 function backendUrl() {
