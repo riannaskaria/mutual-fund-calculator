@@ -239,7 +239,7 @@ router.post('/chat', async (req, res) => {
 
   try {
     const model = getClient().getGenerativeModel({
-      model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite',
       systemInstruction: buildSystemPrompt(context),
       tools: [{ functionDeclarations: TOOLS }],
     });
