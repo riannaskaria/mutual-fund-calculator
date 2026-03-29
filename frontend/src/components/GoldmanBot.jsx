@@ -184,22 +184,103 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
   const suggestions = getSuggestions(selectedFund);
   const canSend     = !!input.trim() && !thinking && configured;
 
+  // ── drag-to-corner logic ──
+  const MARGIN = 24;
+  const BTN = 48;
+  const [corner, setCorner] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mf_bot_corner') || 'null') || { v: 'bottom', h: 'right' }; }
+    catch { return { v: 'bottom', h: 'right' }; }
+  });
+  const dragState = useRef(null);
+  const btnRef = useRef(null);
+
+  const cornerStyle = {
+    top:    corner.v === 'top'    ? MARGIN : 'auto',
+    bottom: corner.v === 'bottom' ? MARGIN : 'auto',
+    left:   corner.h === 'left'   ? MARGIN : 'auto',
+    right:  corner.h === 'right'  ? MARGIN : 'auto',
+  };
+
+  const panelStyle = {
+    top:    corner.v === 'top'    ? MARGIN + BTN + 8 : 'auto',
+    bottom: corner.v === 'bottom' ? MARGIN + BTN + 8 : 'auto',
+    left:   corner.h === 'left'   ? MARGIN : 'auto',
+    right:  corner.h === 'right'  ? MARGIN : 'auto',
+  };
+
+  function onPointerDown(e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const rect = btnRef.current.getBoundingClientRect();
+    dragState.current = {
+      startX:  e.clientX,
+      startY:  e.clientY,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      moved:   false,
+    };
+    btnRef.current.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e) {
+    if (!dragState.current) return;
+    const { startX, startY, offsetX, offsetY } = dragState.current;
+    if (!dragState.current.moved) {
+      if (Math.abs(e.clientX - startX) > 4 || Math.abs(e.clientY - startY) > 4) {
+        dragState.current.moved = true;
+      } else return;
+    }
+    const x = Math.max(0, Math.min(window.innerWidth  - BTN, e.clientX - offsetX));
+    const y = Math.max(0, Math.min(window.innerHeight - BTN, e.clientY - offsetY));
+    const el = btnRef.current;
+    el.style.transition = 'none';
+    el.style.left   = `${x}px`;
+    el.style.top    = `${y}px`;
+    el.style.right  = 'auto';
+    el.style.bottom = 'auto';
+  }
+
+  function onPointerUp(e) {
+    if (!dragState.current) return;
+    if (dragState.current.moved) {
+      const h = e.clientX < window.innerWidth  / 2 ? 'left' : 'right';
+      const v = e.clientY < window.innerHeight / 2 ? 'top'  : 'bottom';
+      const next = { v, h };
+      const el = btnRef.current;
+      el.style.transition = 'left 0.8s cubic-bezier(.34,1.56,.64,1), top 0.8s cubic-bezier(.34,1.56,.64,1)';
+      el.style.left   = h === 'left'   ? `${MARGIN}px` : 'auto';
+      el.style.right  = h === 'right'  ? `${MARGIN}px` : 'auto';
+      el.style.top    = v === 'top'    ? `${MARGIN}px` : 'auto';
+      el.style.bottom = v === 'bottom' ? `${MARGIN}px` : 'auto';
+      setTimeout(() => { if (btnRef.current) btnRef.current.style.transition = 'transform 0.15s'; }, 820);
+      setCorner(next);
+      localStorage.setItem('mf_bot_corner', JSON.stringify(next));
+    } else {
+      setOpen(o => !o);
+    }
+    dragState.current = null;
+  }
+
   return (
     <>
       {/* ── floating button ── */}
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
         title="GS Bot"
         style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
-          width: 48, height: 48, borderRadius: '50%',
+          position: 'fixed', ...cornerStyle, zIndex: 1000,
+          width: BTN, height: BTN, borderRadius: '50%',
           background: configured
             ? `linear-gradient(135deg, ${T.brand}, ${T.accent})`
             : '#6b7280',
-          border: 'none', cursor: 'pointer',
+          border: 'none', cursor: 'grab',
           boxShadow: '0 4px 20px rgba(9,44,97,0.35)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'transform 0.15s',
+          touchAction: 'none',
         }}
         onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
@@ -227,7 +308,7 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
       {/* ── chat panel ── */}
       {open && (
         <div style={{
-          position: 'fixed', bottom: 84, right: 24, zIndex: 999,
+          position: 'fixed', ...panelStyle, zIndex: 999,
           width: 390, maxHeight: 580,
           background: T.solidPanel || T.panelBg, border: `1px solid ${T.border}`,
           borderRadius: 14, boxShadow: '0 8px 40px rgba(0,0,0,0.2)',

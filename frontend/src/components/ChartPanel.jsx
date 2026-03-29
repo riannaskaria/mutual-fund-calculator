@@ -276,6 +276,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
     const next = [entry, ...savedCalcs].slice(0, 50);
     setSavedCalcs(next);
     localStorage.setItem(CALC_HISTORY_KEY, JSON.stringify(next));
+    window.dispatchEvent(new StorageEvent('storage', { key: CALC_HISTORY_KEY, newValue: JSON.stringify(next) }));
     setJustSaved(true);
   }
 
@@ -283,6 +284,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
     const next = savedCalcs.filter(c => c.id !== id);
     setSavedCalcs(next);
     localStorage.setItem(CALC_HISTORY_KEY, JSON.stringify(next));
+    window.dispatchEvent(new StorageEvent('storage', { key: CALC_HISTORY_KEY, newValue: JSON.stringify(next) }));
   }
 
   // Build quarterly chart data (lump + SIP combined)
