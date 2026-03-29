@@ -14,6 +14,7 @@
 const express = require('express');
 const router  = express.Router();
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const fs   = require('fs');
 const path = require('path');
 
@@ -41,18 +42,15 @@ function unsubscribe(email) {
 }
 
 // ─── transport + config ───────────────────────────────────────────────────────
-function createTransporter() {
-  return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST || 'smtp.gmail.com',
-    port:   parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    family: 4, // force IPv4 — Render free tier doesn't support IPv6 outbound
-  });
+function isConfigured() {
+  return !!(process.env.RESEND_API_KEY);
 }
 
-function isConfigured() {
-  return !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+async function sendEmail({ to, subject, html, text }) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const from = process.env.SMTP_FROM || 'Fund Dashboard <onboarding@resend.dev>';
+  const { error } = await resend.emails.send({ from, to, subject, html, text });
+  if (error) throw new Error(error.message);
 }
 
 function backendUrl() {
@@ -343,14 +341,11 @@ router.post('/send-alert', async (req, res) => {
   if (isUnsubscribed(to)) return res.json({ ok: true, skipped: 'unsubscribed' });
 
   try {
-    const transporter = createTransporter();
-    const from  = process.env.SMTP_FROM || process.env.SMTP_USER;
     const isAbove = direction === 'above';
-    const tp    = Number(targetPrice);
-    const cp    = currentPrice != null ? Number(currentPrice) : null;
+    const tp = Number(targetPrice);
+    const cp = currentPrice != null ? Number(currentPrice) : null;
 
-    await transporter.sendMail({
-      from,
+    await sendEmail({
       to,
       subject: `${isAbove ? '↑' : '↓'} ${ticker} alert triggered — $${cp != null ? cp.toFixed(2) : tp.toFixed(2)}`,
       html: alertHtml({ ticker, targetPrice: tp, direction, currentPrice: cp, to }),
@@ -372,11 +367,7 @@ router.post('/test', async (req, res) => {
   if (!isConfigured()) return res.status(503).json({ error: 'Email not configured. Add SMTP_USER and SMTP_PASS to backend/.env', unconfigured: true });
 
   try {
-    const transporter = createTransporter();
-    const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-
-    await transporter.sendMail({
-      from,
+    await sendEmail({
       to,
       subject: 'GS Fund Dashboard — email alerts verified ✓',
       html: testHtml({ to }),
