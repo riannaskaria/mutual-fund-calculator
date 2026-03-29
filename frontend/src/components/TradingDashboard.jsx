@@ -180,6 +180,19 @@ export default function TradingDashboard() {
           localStorage.setItem('mf_alerts_v1', JSON.stringify(updatedAlerts));
           setAlerts(updatedAlerts);
           setAlertToast(triggered[0]);
+          // Browser notifications
+          triggered.forEach(alert => {
+            const fund = results.find(f => f?.id === alert.ticker);
+            const price = fund?.price != null ? `$${fund.price.toFixed(2)}` : '';
+            const body = `${alert.ticker} is ${alert.direction} $${alert.targetPrice.toFixed(2)}${price ? ` — now at ${price}` : ''}`;
+            if (Notification.permission === 'granted') {
+              new Notification('Fund Alert Triggered', { body, icon: '/favicon.svg' });
+            } else if (Notification.permission !== 'denied') {
+              Notification.requestPermission().then(p => {
+                if (p === 'granted') new Notification('Fund Alert Triggered', { body, icon: '/favicon.svg' });
+              });
+            }
+          });
           // Send email alerts
           try {
             const emailCfg = JSON.parse(localStorage.getItem('mf_email_alerts_v1') || '{}');
@@ -262,8 +275,11 @@ export default function TradingDashboard() {
 
   useEffect(() => {
     fetchAllPrices();
-    const iv = setInterval(fetchAllPrices, 15000);
-    return () => clearInterval(iv);
+    const iv = setInterval(fetchAllPrices, 30000);
+    // Re-check immediately when user returns to tab
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchAllPrices(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVisible); };
   }, [fetchAllPrices]);
 
   // Fetch quote only when the selected ticker actually changes, not on every 15s price refresh
@@ -302,6 +318,14 @@ export default function TradingDashboard() {
     const a = { id: Date.now(), ticker, targetPrice: parseFloat(targetPrice), direction, triggered: false };
     setAlerts(prev => {
       const next = [...prev, a];
+      try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const resetAlert = useCallback((id) => {
+    setAlerts(prev => {
+      const next = prev.map(a => a.id === id ? { ...a, triggered: false } : a);
       try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch {}
       return next;
     });
@@ -451,6 +475,7 @@ export default function TradingDashboard() {
           onToggleFav={toggleFav}
           alerts={alerts}
           onRemoveAlert={removeAlert}
+          onResetAlert={resetAlert}
         />
         {/* Alert toast */}
         {alertToast && (

@@ -125,7 +125,7 @@ function EmptyState({ text }) {
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
-export default function AccountPanel({ open, onClose, funds = [], quote, selectedFund, favorites: favProp, onToggleFav, alerts = [], onRemoveAlert }) {
+export default function AccountPanel({ open, onClose, funds = [], quote, selectedFund, favorites: favProp, onToggleFav, alerts = [], onRemoveAlert, onResetAlert }) {
     const T = useT();
     const [account, setAccount] = useState(loadAccount);
     const [profile, setProfile] = useState(loadProfile);
@@ -720,8 +720,20 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                         {activeTab === 'Alerts' && (() => {
                             const activeAlerts = alerts.filter(a => !a.triggered);
                             const triggered = alerts.filter(a => a.triggered);
+                            const notifPermission = typeof Notification !== 'undefined' ? Notification.permission : 'denied';
                             return (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                    {notifPermission !== 'granted' && notifPermission !== 'denied' && (
+                                        <div style={{ background: 'rgba(99,130,210,0.1)', border: '1px solid rgba(99,130,210,0.3)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                                            <div style={{ fontSize: 11, color: T.textMute }}>Enable browser notifications to get alerted even when the tab is in the background.</div>
+                                            <button onClick={() => Notification.requestPermission()} style={{ background: T.accent, color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>Enable</button>
+                                        </div>
+                                    )}
+                                    {notifPermission === 'granted' && (
+                                        <div style={{ fontSize: 10, color: T.positive, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                            <span>✓</span> Browser notifications enabled
+                                        </div>
+                                    )}
                                     <div>
                                         <SectionHeading>Active Alerts</SectionHeading>
                                         {activeAlerts.length === 0
@@ -759,25 +771,28 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                             {triggered.map(a => (
                                                 <div key={a.id} style={{
                                                     background: T.cardBg, border: `1px solid ${T.border}`,
-                                                    borderRadius: 9, padding: '11px 14px', marginBottom: 8,
-                                                    display: 'flex', alignItems: 'center', gap: 10, opacity: 0.65,
+                                                    borderRadius: 9, marginBottom: 8,
+                                                    display: 'flex', overflow: 'hidden',
                                                 }}>
-                                                    <div style={{
-                                                        width: 30, height: 30, borderRadius: 6,
-                                                        background: `linear-gradient(135deg, ${T.positive}, ${T.positive}88)`,
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: 14, color: '#fff', flexShrink: 0,
-                                                    }}>✓</div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{a.ticker}</div>
-                                                        <div style={{ fontSize: 11, color: T.textMute }}>
-                                                            {a.direction === 'above' ? '↑' : '↓'} ${a.targetPrice.toFixed(2)} · Hit
+                                                    <div style={{ width: 4, flexShrink: 0, background: T.positive, borderRadius: '9px 0 0 9px' }} />
+                                                    <div style={{ flex: 1, padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{a.ticker}</div>
+                                                            <div style={{ fontSize: 11, color: T.textMute }}>
+                                                                {a.direction === 'above' ? '↑' : '↓'} ${a.targetPrice.toFixed(2)} · Hit
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: 6 }}>
+                                                            <button onClick={() => onResetAlert?.(a.id)} style={{
+                                                                background: 'none', border: `1px solid ${T.accent}`, borderRadius: 5,
+                                                                cursor: 'pointer', color: T.accent, fontSize: 11, padding: '3px 8px',
+                                                            }}>Reset</button>
+                                                            <button onClick={() => onRemoveAlert?.(a.id)} style={{
+                                                                background: 'none', border: `1px solid ${T.border}`, borderRadius: 5,
+                                                                cursor: 'pointer', color: T.textMute, fontSize: 11, padding: '3px 8px',
+                                                            }}>Dismiss</button>
                                                         </div>
                                                     </div>
-                                                    <button onClick={() => onRemoveAlert?.(a.id)} style={{
-                                                        background: 'none', border: `1px solid ${T.border}`, borderRadius: 5,
-                                                        cursor: 'pointer', color: T.textMute, fontSize: 11, padding: '3px 8px',
-                                                    }}>Dismiss</button>
                                                 </div>
                                             ))}
                                         </div>
