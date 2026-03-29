@@ -150,12 +150,19 @@ function PriceChart({ ticker, quote }) {
   );
 }
 
+const CALC_HISTORY_KEY = 'mf_calc_history_v1';
+
 function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculating, onCalculate, setInvestmentAmount, setYears, calcHistory }) {
   const T = useT();
   const [advancedCapm, setAdvancedCapm] = useState(false);
   const [recurringContrib, setRecurringContrib] = useState('');
   const [contribFrequencyId, setContribFrequencyId] = useState('monthly');
   const [ltcgRatePct, setLtcgRatePct] = useState('');
+  const [savedCalcs, setSavedCalcs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(CALC_HISTORY_KEY)) || []; }
+    catch { return []; }
+  });
+  const [justSaved, setJustSaved] = useState(false);
   const onCalculateRef = useRef(onCalculate);
   useEffect(() => { onCalculateRef.current = onCalculate; }, [onCalculate]);
 
@@ -231,6 +238,34 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
 
   // Alpha vs risk-free rate
   const alpha = rate - rf;
+
+  function saveProjection() {
+    const entry = {
+      id: Date.now(),
+      ticker,
+      principal,
+      years: yearsNum,
+      pmt,
+      freqId: contribFrequencyId,
+      totalFV,
+      totalGain,
+      totalGainPct,
+      rate,
+      afterTaxFV,
+      savedAt: new Date().toISOString(),
+    };
+    const next = [entry, ...savedCalcs].slice(0, 50);
+    setSavedCalcs(next);
+    localStorage.setItem(CALC_HISTORY_KEY, JSON.stringify(next));
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 1800);
+  }
+
+  function deleteProjection(id) {
+    const next = savedCalcs.filter(c => c.id !== id);
+    setSavedCalcs(next);
+    localStorage.setItem(CALC_HISTORY_KEY, JSON.stringify(next));
+  }
 
   // Build quarterly chart data (lump + SIP combined)
   const chartData = useMemo(() => {
@@ -405,6 +440,32 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
                 <span style={{ marginLeft: 5 }}>{ltcgLabelPct}% LTCG applied to gains{!advancedCapm ? ' (default)' : ''}</span>
               </div>
             )}
+            <div style={{ marginTop: 8 }}>
+              <button
+                onClick={saveProjection}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  fontSize: 11, fontWeight: 600,
+                  color: justSaved ? T.positive : T.accent,
+                  background: 'transparent',
+                  border: `1px solid ${justSaved ? T.positive : T.accent}`,
+                  borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                  transition: 'all 0.18s', fontFamily: 'inherit',
+                }}
+              >
+                {justSaved ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
+                    Save projection
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
 
@@ -460,6 +521,57 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
               ))}
             </div>
           </div>
+
+          {/* Saved projections history */}
+          {savedCalcs.length > 0 && (
+            <div style={{ flexShrink: 0, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
+              <div style={{ fontSize: 10, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600, marginBottom: 8 }}>
+                Saved projections ({savedCalcs.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 220, overflowY: 'auto' }}>
+                {savedCalcs.map(c => (
+                  <div key={c.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                    background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8,
+                    padding: '7px 10px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: T.accent, flexShrink: 0 }}>{c.ticker}</span>
+                      <span style={{ fontSize: 11, color: T.textMute, flexShrink: 0 }}>
+                        {fmtMoney(c.principal)} · {c.years}yr{c.pmt > 0 ? ` +${fmtMoney(c.pmt)}/${c.freqId?.replace('ly', '')}` : ''}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: T.positive, flexShrink: 0 }}>
+                        → {fmtMoneyFull(c.totalFV)}
+                      </span>
+                      <span style={{ fontSize: 10, color: T.textFaint, flexShrink: 0 }}>
+                        {c.rate?.toFixed(2)}% CAPM
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span style={{ fontSize: 9, color: T.textFaint, whiteSpace: 'nowrap' }}>
+                        {new Date(c.savedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                      </span>
+                      <button
+                        onClick={() => deleteProjection(c.id)}
+                        title="Remove"
+                        style={{
+                          background: 'transparent', border: 'none', cursor: 'pointer',
+                          color: T.textFaint, padding: '2px 4px', borderRadius: 4,
+                          display: 'flex', alignItems: 'center', transition: 'color 0.15s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = T.negative}
+                        onMouseLeave={e => e.currentTarget.style.color = T.textFaint}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : !calculating && (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10 }}>
