@@ -47,6 +47,7 @@ function createTransporter() {
     port:   parseInt(process.env.SMTP_PORT || '587'),
     secure: process.env.SMTP_SECURE === 'true',
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    family: 4, // force IPv4 — Render free tier doesn't support IPv6 outbound
   });
 }
 
