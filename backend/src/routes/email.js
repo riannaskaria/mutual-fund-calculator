@@ -13,8 +13,7 @@
 
 const express = require('express');
 const router  = express.Router();
-const nodemailer = require('nodemailer');
-const { Resend } = require('resend');
+const Brevo   = require('@getbrevo/brevo');
 const fs   = require('fs');
 const path = require('path');
 
@@ -43,17 +42,23 @@ function unsubscribe(email) {
 
 // ─── transport + config ───────────────────────────────────────────────────────
 function isConfigured() {
-  return !!(process.env.RESEND_API_KEY);
+  return !!(process.env.BREVO_API_KEY);
 }
 
 async function sendEmail({ to, subject, html, text }) {
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  // Resend free tier only allows sending from onboarding@resend.dev unless a domain is verified
-  const from = 'Fund Dashboard <onboarding@resend.dev>';
-  console.log('[sendEmail] sending from:', from, 'to:', to);
-  const result = await resend.emails.send({ from, to, subject, html, text });
-  console.log('[sendEmail] result:', JSON.stringify(result));
-  if (result.error) throw new Error(result.error.message);
+  const apiInstance = new Brevo.TransactionalEmailsApi();
+  apiInstance.authentications['apiKey'].apiKey = process.env.BREVO_API_KEY;
+
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  sendSmtpEmail.sender = { name: 'Fund Dashboard', email: process.env.BREVO_SENDER_EMAIL || 'joaol.olivsilva@gmail.com' };
+  sendSmtpEmail.to = [{ email: to }];
+  sendSmtpEmail.subject = subject;
+  sendSmtpEmail.htmlContent = html;
+  sendSmtpEmail.textContent = text;
+
+  console.log('[sendEmail] sending to:', to);
+  const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
+  console.log('[sendEmail] success, messageId:', result.body?.messageId);
 }
 
 function backendUrl() {
