@@ -1,18 +1,17 @@
-// Goldman Bot — Agentic chat endpoint using OpenAI function calling
+// Goldman Bot — Agentic chat endpoint using Google Gemini function calling
 // POST /api/bot/chat  { messages: [...], context: { ticker, funds, articles, quote } }
 
 require('dotenv').config({ quiet: true });
 const express = require('express');
 const router = express.Router();
-const OpenAI = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 const { calculate, validateTicker, getAllFunds } = require('../services/mutualFundService');
 
-// Lazy init so dotenv is loaded first
-let client;
+let genAI;
 function getClient() {
-  if (!client) client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return client;
+  if (!genAI) genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  return genAI;
 }
 
 const BASE_SYSTEM_PROMPT = `You are GS Bot, a sharp, knowledgeable financial assistant for a mutual fund dashboard built for Goldman Sachs.
@@ -47,73 +46,58 @@ function buildSystemPrompt(context) {
 
 const TOOLS = [
   {
-    type: 'function',
-    function: {
-      name: 'get_fund_quote',
-      description: 'Fetch the latest NAV price, 52-week high/low, and price change for a mutual fund ticker from Yahoo Finance.',
-      parameters: {
-        type: 'object',
-        properties: {
-          ticker: { type: 'string', description: 'Mutual fund ticker symbol, e.g. VFIAX' },
-        },
-        required: ['ticker'],
+    name: 'get_fund_quote',
+    description: 'Fetch the latest NAV price, 52-week high/low, and price change for a mutual fund ticker from Yahoo Finance.',
+    parameters: {
+      type: 'object',
+      properties: {
+        ticker: { type: 'string', description: 'Mutual fund ticker symbol, e.g. VFIAX' },
       },
+      required: ['ticker'],
     },
   },
   {
-    type: 'function',
-    function: {
-      name: 'run_capm',
-      description: 'Run a CAPM-based future value projection for a single mutual fund. Returns beta, expected return rate, CAPM rate, and projected future value.',
-      parameters: {
-        type: 'object',
-        properties: {
-          ticker:    { type: 'string',  description: 'Mutual fund ticker, e.g. VFIAX' },
-          principal: { type: 'number',  description: 'Initial investment in USD, e.g. 10000' },
-          years:     { type: 'integer', description: 'Investment horizon in years, e.g. 10' },
-        },
-        required: ['ticker', 'principal', 'years'],
+    name: 'run_capm',
+    description: 'Run a CAPM-based future value projection for a single mutual fund. Returns beta, expected return rate, CAPM rate, and projected future value.',
+    parameters: {
+      type: 'object',
+      properties: {
+        ticker:    { type: 'string',  description: 'Mutual fund ticker, e.g. VFIAX' },
+        principal: { type: 'number',  description: 'Initial investment in USD, e.g. 10000' },
+        years:     { type: 'integer', description: 'Investment horizon in years, e.g. 10' },
       },
+      required: ['ticker', 'principal', 'years'],
     },
   },
   {
-    type: 'function',
-    function: {
-      name: 'compare_funds',
-      description: 'Compare two mutual funds side-by-side using live CAPM projections. Returns beta, CAPM rate, and projected future value for each fund, plus which one wins and by how much.',
-      parameters: {
-        type: 'object',
-        properties: {
-          ticker_a:  { type: 'string',  description: 'First fund ticker, e.g. VFIAX' },
-          ticker_b:  { type: 'string',  description: 'Second fund ticker, e.g. FXAIX' },
-          principal: { type: 'number',  description: 'Initial investment in USD' },
-          years:     { type: 'integer', description: 'Investment horizon in years' },
-        },
-        required: ['ticker_a', 'ticker_b', 'principal', 'years'],
+    name: 'compare_funds',
+    description: 'Compare two mutual funds side-by-side using live CAPM projections. Returns beta, CAPM rate, and projected future value for each fund, plus which one wins and by how much.',
+    parameters: {
+      type: 'object',
+      properties: {
+        ticker_a:  { type: 'string',  description: 'First fund ticker, e.g. VFIAX' },
+        ticker_b:  { type: 'string',  description: 'Second fund ticker, e.g. FXAIX' },
+        principal: { type: 'number',  description: 'Initial investment in USD' },
+        years:     { type: 'integer', description: 'Investment horizon in years' },
       },
+      required: ['ticker_a', 'ticker_b', 'principal', 'years'],
     },
   },
   {
-    type: 'function',
-    function: {
-      name: 'search_news',
-      description: 'Search the latest financial news articles loaded in the dashboard for a topic. Returns matching headlines and sources.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Topic to search for, e.g. "Vanguard", "interest rates", "S&P 500"' },
-        },
-        required: ['query'],
+    name: 'search_news',
+    description: 'Search the latest financial news articles loaded in the dashboard for a topic. Returns matching headlines and sources.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Topic to search for, e.g. "Vanguard", "interest rates", "S&P 500"' },
       },
+      required: ['query'],
     },
   },
   {
-    type: 'function',
-    function: {
-      name: 'list_funds',
-      description: 'List all mutual fund tickers supported for CAPM calculations (run_capm and compare_funds).',
-      parameters: { type: 'object', properties: {} },
-    },
+    name: 'list_funds',
+    description: 'List all mutual fund tickers supported for CAPM calculations (run_capm and compare_funds).',
+    parameters: { type: 'object', properties: {} },
   },
 ];
 
@@ -127,12 +111,12 @@ async function executeTool(name, args, context) {
         timeout: 8000,
       });
       const meta = resp.data?.chart?.result?.[0]?.meta;
-      if (!meta) return JSON.stringify({ error: 'No data returned for ticker: ' + ticker });
+      if (!meta) return { error: 'No data returned for ticker: ' + ticker };
       const price     = meta.regularMarketPrice ?? null;
       const prev      = meta.chartPreviousClose ?? null;
       const change    = price != null && prev != null ? price - prev : null;
       const changePct = change != null && prev ? (change / prev) * 100 : null;
-      return JSON.stringify({
+      return {
         ticker: meta.symbol,
         name: meta.longName || meta.shortName || meta.symbol,
         price,
@@ -142,9 +126,9 @@ async function executeTool(name, args, context) {
         fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh ?? null,
         fiftyTwoWeekLow:  meta.fiftyTwoWeekLow  ?? null,
         currency: meta.currency ?? 'USD',
-      });
+      };
     } catch (e) {
-      return JSON.stringify({ error: 'Failed to fetch quote: ' + e.message });
+      return { error: 'Failed to fetch quote: ' + e.message };
     }
   }
 
@@ -154,7 +138,7 @@ async function executeTool(name, args, context) {
       validateTicker(ticker);
       const result = await calculate(ticker, principal, years);
       const fv = +result.futureValue.toFixed(2);
-      return JSON.stringify({
+      return {
         ticker: result.ticker,
         principal: result.principal,
         years: result.years,
@@ -165,9 +149,9 @@ async function executeTool(name, args, context) {
         futureValue: fv,
         futureValueFormatted: `$${fv.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         note: 'futureValue is the authoritative result — do not recalculate it',
-      });
+      };
     } catch (e) {
-      return JSON.stringify({ error: e.message });
+      return { error: e.message };
     }
   }
 
@@ -186,7 +170,7 @@ async function executeTool(name, args, context) {
         capmRate:           +(r.capmRate           * 100).toFixed(4),
         futureValue:        +r.futureValue.toFixed(2),
       });
-      return JSON.stringify({
+      return {
         principal,
         years,
         [ticker_a]: snap(a),
@@ -194,9 +178,9 @@ async function executeTool(name, args, context) {
         winner:     a.futureValue >= b.futureValue ? ticker_a : ticker_b,
         difference: +(Math.abs(a.futureValue - b.futureValue)).toFixed(2),
         note: 'Use the futureValue fields exactly as returned — do not recalculate',
-      });
+      };
     } catch (e) {
-      return JSON.stringify({ error: e.message });
+      return { error: e.message };
     }
   }
 
@@ -204,8 +188,6 @@ async function executeTool(name, args, context) {
     const { query } = args;
     const articles = context?.articles || [];
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-
-    // Score each article by how many query words it contains, then sort by score
     const scored = articles
       .map(a => {
         const hay = (a.title + ' ' + (a.source || '')).toLowerCase();
@@ -221,27 +203,34 @@ async function executeTool(name, args, context) {
         tag: a.tag,
         time: new Date(a.time).toLocaleDateString(),
       }));
-
-    if (scored.length === 0) return JSON.stringify({ message: 'No recent articles found for: ' + query });
-    return JSON.stringify({ count: scored.length, articles: scored });
+    if (scored.length === 0) return { message: 'No recent articles found for: ' + query };
+    return { count: scored.length, articles: scored };
   }
 
   if (name === 'list_funds') {
     const funds = getAllFunds();
-    return JSON.stringify({
+    return {
       count: funds.length,
       funds: funds.map(f => ({ ticker: f.ticker, name: f.name })),
       note: 'These tickers are supported for run_capm and compare_funds.',
-    });
+    };
   }
 
-  return JSON.stringify({ error: 'Unknown tool: ' + name });
+  return { error: 'Unknown tool: ' + name };
+}
+
+// Convert OpenAI-style message history to Gemini format
+function toGeminiHistory(messages) {
+  return messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content || '' }],
+  }));
 }
 
 // POST /api/bot/chat
 router.post('/chat', async (req, res) => {
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(503).json({ error: 'GS Bot is not configured. Add OPENAI_API_KEY to backend/.env' });
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(503).json({ error: 'GS Bot is not configured. Add GEMINI_API_KEY to backend/.env' });
   }
   const { messages, context } = req.body;
   if (!messages || !Array.isArray(messages)) {
@@ -249,51 +238,63 @@ router.post('/chat', async (req, res) => {
   }
 
   try {
-    let currentMessages = [
-      { role: 'system', content: buildSystemPrompt(context) },
-      ...messages,
-    ];
+    const model = getClient().getGenerativeModel({
+      model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+      systemInstruction: buildSystemPrompt(context),
+      tools: [{ functionDeclarations: TOOLS }],
+    });
+
+    // Last message is the new user turn; everything before is history
+    const history = toGeminiHistory(messages.slice(0, -1));
+    const lastMessage = messages[messages.length - 1];
+
+    const chat = model.startChat({ history });
 
     // Agentic loop — capped at MAX_ITER to prevent runaway tool chains
     const MAX_ITER = 8;
     let iter = 0;
+    let currentParts = [{ text: lastMessage.content || '' }];
+
     while (iter < MAX_ITER) {
       iter++;
-      const response = await getClient().chat.completions.create({
-        model:       process.env.OPENAI_MODEL || 'gpt-4o-mini',
-        tools:       TOOLS,
-        tool_choice: 'auto',
-        messages:    currentMessages,
-      });
+      const result = await chat.sendMessage(currentParts);
+      const response = result.response;
+      const candidate = response.candidates?.[0];
+      if (!candidate) return res.json({ reply: 'No response from model.' });
 
-      const choice = response.choices?.[0];
-      if (!choice?.message) return res.json({ reply: 'No response from model.' });
-      const msg = choice.message;
-      currentMessages.push(msg);
+      const parts = candidate.content?.parts || [];
+      const functionCalls = parts.filter(p => p.functionCall);
+      const textParts = parts.filter(p => p.text).map(p => p.text).join('');
 
-      if (!msg.tool_calls || msg.tool_calls.length === 0) {
-        return res.json({ reply: msg.content || 'No response.' });
+      // No tool calls — final text response
+      if (functionCalls.length === 0) {
+        return res.json({ reply: textParts || 'No response.' });
       }
 
       if (iter === MAX_ITER) {
-        return res.json({ reply: msg.content || 'Request required too many tool calls to complete.' });
+        return res.json({ reply: textParts || 'Request required too many tool calls to complete.' });
       }
 
-      // Execute all tool calls in parallel
+      // Execute all tool calls in parallel, then feed results back
       const toolResults = await Promise.all(
-        msg.tool_calls.map(async (tc) => {
-          let result;
+        functionCalls.map(async (part) => {
+          const { name, args } = part.functionCall;
+          let output;
           try {
-            const args = JSON.parse(tc.function.arguments);
-            result = await executeTool(tc.function.name, args, context);
+            output = await executeTool(name, args || {}, context);
           } catch (e) {
-            result = JSON.stringify({ error: 'Tool execution failed: ' + e.message });
+            output = { error: 'Tool execution failed: ' + e.message };
           }
-          return { role: 'tool', tool_call_id: tc.id, content: result };
+          return {
+            functionResponse: {
+              name,
+              response: output,
+            },
+          };
         })
       );
 
-      currentMessages.push(...toolResults);
+      currentParts = toolResults;
     }
   } catch (e) {
     console.error('Bot error:', e);
