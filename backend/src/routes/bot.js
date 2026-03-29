@@ -71,11 +71,11 @@ function buildSystemPrompt(context) {
 const TOOLS = [
   {
     name: 'get_fund_quote',
-    description: 'Fetch the latest NAV price, 52-week high/low, and price change for a mutual fund ticker from Yahoo Finance.',
+    description: 'Fetch the latest price, 52-week high/low, and price change for ANY ticker from Yahoo Finance — mutual funds, ETFs, and stocks (e.g. AAPL, TSLA, SPY, VFIAX).',
     parameters: {
       type: 'object',
       properties: {
-        ticker: { type: 'string', description: 'Mutual fund ticker symbol, e.g. VFIAX' },
+        ticker: { type: 'string', description: 'Any ticker symbol — stock, ETF, or mutual fund. e.g. AAPL, TSLA, SPY, VFIAX, QQQ' },
       },
       required: ['ticker'],
     },
