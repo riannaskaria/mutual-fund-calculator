@@ -366,6 +366,7 @@ router.post('/send-alert', async (req, res) => {
 // POST /api/email/test
 router.post('/test', async (req, res) => {
   const { to } = req.body;
+  console.log('[email/test] request received, to:', to, 'configured:', isConfigured());
   if (!to) return res.status(400).json({ error: 'to is required' });
   if (!isConfigured()) return res.status(503).json({ error: 'Email not configured. Add SMTP_USER and SMTP_PASS to backend/.env', unconfigured: true });
 
@@ -381,9 +382,10 @@ router.post('/test', async (req, res) => {
       text: `Your GS Fund Dashboard email alerts are configured correctly.\n\nUnsubscribe: ${backendUrl()}/api/email/unsubscribe?email=${encodeURIComponent(to)}`,
     });
 
+    console.log('[email/test] sent successfully to:', to);
     res.json({ ok: true });
   } catch (err) {
-    console.error('Email test failed:', err.message);
+    console.error('[email/test] failed:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
