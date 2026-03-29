@@ -848,17 +848,13 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                     return (
                                                         <div key={p.id} style={{
                                                             background: T.cardBg, border: `1px solid ${T.border}`,
-                                                            borderRadius: 10, padding: '12px 14px',
-                                                            display: 'flex', flexDirection: 'column', gap: 6,
+                                                            borderRadius: 10, overflow: 'hidden',
+                                                            display: 'flex', flexDirection: 'row',
                                                         }}>
+                                                            <div style={{ width: 4, flexShrink: 0, background: T.accent, borderRadius: '10px 0 0 10px' }} />
+                                                            <div style={{ flex: 1, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                                    <div style={{
-                                                                        width: 28, height: 28, borderRadius: 5,
-                                                                        background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
-                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                        fontSize: 8, color: '#fff', fontWeight: 700, flexShrink: 0,
-                                                                    }}>{p.ticker?.slice(0, 3)}</div>
                                                                     <div>
                                                                         <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{p.ticker}</div>
                                                                         <div style={{ fontSize: 10, color: T.textMute }}>{fmtDate(p.savedAt)}</div>
@@ -906,6 +902,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                                         <div style={{ fontSize: 10, color: T.textMute }}>{gainPct?.toFixed(1)}%</div>
                                                                     </div>
                                                                 )}
+                                                            </div>
                                                             </div>
                                                         </div>
                                                     );
