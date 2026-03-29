@@ -362,7 +362,7 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e', marginBottom: 2 }}>API key not configured</div>
                 <div style={{ fontSize: 11, color: '#78350f', lineHeight: 1.5 }}>
                   Add{' '}
-                  <code style={{ background: '#fde68a', padding: '1px 4px', borderRadius: 3, fontSize: 10 }}>OPENAI_API_KEY=sk-...</code>
+                  <code style={{ background: '#fde68a', padding: '1px 4px', borderRadius: 3, fontSize: 10 }}>GEMINI_API_KEY=...</code>
                   {' '}to{' '}
                   <code style={{ background: '#fde68a', padding: '1px 4px', borderRadius: 3, fontSize: 10 }}>backend/.env</code>
                   {' '}and restart the server.
