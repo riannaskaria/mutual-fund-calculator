@@ -512,10 +512,8 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                         )}
                                         {testStatus === 'unconfigured' && (
                                             <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
-                                                <strong style={{ display: 'block', marginBottom: 4 }}>SMTP not configured</strong>
-                                                Open <code style={{ background: '#fde68a', padding: '1px 5px', borderRadius: 3, fontSize: 11 }}>backend/.env</code> and fill in{' '}
-                                                <code style={{ background: '#fde68a', padding: '1px 5px', borderRadius: 3, fontSize: 11 }}>SMTP_USER</code> and{' '}
-                                                <code style={{ background: '#fde68a', padding: '1px 5px', borderRadius: 3, fontSize: 11 }}>SMTP_PASS</code>, then restart the backend.
+                                                <strong style={{ display: 'block', marginBottom: 4 }}>Email not configured</strong>
+                                                The email service is not set up on the server. Contact the administrator.
                                             </div>
                                         )}
                                         {testStatus === 'error' && testError && (
