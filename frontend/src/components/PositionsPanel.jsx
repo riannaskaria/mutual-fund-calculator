@@ -1,7 +1,39 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useT, getFundTicker, getFundBaseName } from '../theme';
 
 const PAGE_SIZE = 20;
+
+function useTickerSearch(query) {
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) { setResults([]); return; }
+
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/yahoo-api/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=10&newsCount=0&listsCount=0`,
+          { headers: { 'Accept': 'application/json' } }
+        );
+        const data = await res.json();
+        setResults(data?.quotes?.filter(q => q.symbol) ?? []);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 220);
+
+    return () => clearTimeout(debounceRef.current);
+  }, [query]);
+
+  return { results, loading };
+}
 
 export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefresh, customTickers = [], favorites = new Set(), onToggleFav, onAddFund, onRemoveFund }) {
   const T = useT();
@@ -11,8 +43,35 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
   const [addInput, setAddInput] = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(-1);
   const scrollRef = useRef(null);
   const addInputRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  const { results: suggestions, loading: suggestLoading } = useTickerSearch(addInput);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e) => {
+      if (!dropdownRef.current?.contains(e.target) && !addInputRef.current?.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
+
+  // Open dropdown when suggestions arrive
+  useEffect(() => {
+    if (suggestions.length > 0 && addInput.trim()) {
+      setDropdownOpen(true);
+      setHighlightIdx(-1);
+    } else {
+      setDropdownOpen(false);
+    }
+  }, [suggestions, addInput]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -34,20 +93,51 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
 
   const visible = filtered.slice(0, visibleCount);
 
-  const handleAdd = async () => {
-    const sym = addInput.trim().toUpperCase();
-    if (!sym) return;
+  const handleAdd = async (sym) => {
+    const ticker = (sym || addInput).trim().toUpperCase();
+    if (!ticker) return;
+    setDropdownOpen(false);
     setAddLoading(true);
     setAddError('');
     try {
-      await onAddFund(sym);
+      await onAddFund(ticker);
       setAddInput('');
       setAddOpen(false);
     } catch (err) {
-      setAddError(err?.message || `"${sym}" not found`);
+      setAddError(err?.message || `"${ticker}" not found`);
     } finally {
       setAddLoading(false);
     }
+  };
+
+  const handleKeyDown = (e) => {
+    if (!dropdownOpen || suggestions.length === 0) {
+      if (e.key === 'Enter') handleAdd();
+      if (e.key === 'Escape') setAddOpen(false);
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIdx(i => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIdx(i => Math.max(i - 1, -1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightIdx >= 0) {
+        handleAdd(suggestions[highlightIdx].symbol);
+      } else {
+        handleAdd();
+      }
+    } else if (e.key === 'Escape') {
+      setDropdownOpen(false);
+    }
+  };
+
+  const typeLabel = (type) => {
+    if (!type) return null;
+    const map = { EQUITY: 'Stock', ETF: 'ETF', MUTUALFUND: 'Fund', INDEX: 'Index', CURRENCY: 'FX', FUTURE: 'Futures', CRYPTOCURRENCY: 'Crypto' };
+    return map[type] ?? type;
   };
 
   const refreshStr = lastRefresh
@@ -56,7 +146,7 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
 
   return (
     <div style={{
-      width: 260, background: T.panelBg, border: `1px solid ${T.border}`, borderRadius: 14,
+      width: 260, background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 14,
       backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
       display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden',
     }}>
@@ -64,7 +154,7 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Watchlist</span>
         <button
-          onClick={() => { setAddOpen(v => !v); setAddError(''); setAddInput(''); setTimeout(() => addInputRef.current?.focus(), 50); }}
+          onClick={() => { setAddOpen(v => !v); setAddError(''); setAddInput(''); setDropdownOpen(false); setTimeout(() => addInputRef.current?.focus(), 50); }}
           title="Add fund"
           style={{
             width: 26, height: 26, borderRadius: '50%',
@@ -78,18 +168,18 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
         >+</button>
       </div>
 
-      {/* Add fund input (expands when open) */}
+      {/* Add fund input */}
       {addOpen && (
-        <div style={{ padding: '8px 10px', borderBottom: `1px solid ${T.border}`, background: T.inputBg }}>
+        <div style={{ padding: '8px 10px', borderBottom: `1px solid ${T.border}`, background: T.inputBg, position: 'relative', zIndex: 10 }}>
           <div style={{ display: 'flex', gap: 6 }}>
             <input
               ref={addInputRef}
               value={addInput}
               onChange={e => { setAddInput(e.target.value.toUpperCase()); setAddError(''); }}
-              onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAddOpen(false); }}
+              onKeyDown={handleKeyDown}
               placeholder="Ticker (e.g. AAPL, VWELX)"
               style={{
-                flex: 1, background: T.panelBg, border: `1px solid ${addError ? T.negative : T.border}`,
+                flex: 1, background: T.solidPanel, border: `1px solid ${addError ? T.negative : T.border}`,
                 borderRadius: 8, padding: '6px 10px', fontSize: 12, color: T.text,
                 outline: 'none', fontFamily: 'inherit', letterSpacing: '0.02em',
               }}
@@ -97,7 +187,7 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
               onBlur={e => { e.target.style.borderColor = addError ? T.negative : T.border; }}
             />
             <button
-              onClick={handleAdd}
+              onClick={() => handleAdd()}
               disabled={addLoading || !addInput.trim()}
               style={{
                 background: !addInput.trim() ? T.border : T.accent,
@@ -113,6 +203,69 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
                 : 'Add'}
             </button>
           </div>
+
+          {/* Autocomplete dropdown */}
+          {dropdownOpen && (
+            <div
+              ref={dropdownRef}
+              style={{
+                position: 'absolute', top: '100%', left: 10, right: 10,
+                background: T.solidPanel, border: `1px solid ${T.border}`,
+                borderRadius: 10, marginTop: 4, maxHeight: 250,
+                overflowY: 'auto',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                zIndex: 100,
+              }}
+            >
+              {suggestLoading && suggestions.length === 0 && (
+                <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 10, height: 10, border: `2px solid ${T.border}`, borderTopColor: T.accent, borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: T.textMute }}>Searching…</span>
+                </div>
+              )}
+              {suggestions.map((s, i) => {
+                const label = typeLabel(s.quoteType);
+                const isHighlighted = i === highlightIdx;
+                return (
+                  <div
+                    key={s.symbol}
+                    onMouseDown={e => { e.preventDefault(); handleAdd(s.symbol); }}
+                    onMouseEnter={() => setHighlightIdx(i)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '7px 12px', cursor: 'pointer', gap: 8,
+                      background: isHighlighted ? `${T.accent}18` : 'transparent',
+                      borderBottom: i < suggestions.length - 1 ? `1px solid ${T.border}` : 'none',
+                      transition: 'background 0.1s',
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isHighlighted ? T.accent : T.text }}>{s.symbol}</span>
+                        {label && (
+                          <span style={{
+                            fontSize: 8, fontWeight: 600, letterSpacing: '0.04em',
+                            color: T.accentSoft, background: `${T.accent}18`,
+                            border: `1px solid ${T.accent}30`, borderRadius: 4,
+                            padding: '1px 4px',
+                          }}>{label.toUpperCase()}</span>
+                        )}
+                      </div>
+                      {s.longname || s.shortname ? (
+                        <div style={{ fontSize: 10, color: T.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
+                          {s.longname || s.shortname}
+                        </div>
+                      ) : null}
+                    </div>
+                    {s.exchange && (
+                      <span style={{ fontSize: 9, color: T.textFaint, flexShrink: 0 }}>{s.exchDisp || s.exchange}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {addError && <div style={{ fontSize: 10, color: T.negative, marginTop: 5, paddingLeft: 2 }}>{addError}</div>}
           <div style={{ fontSize: 9, color: T.textFaint, marginTop: 4, paddingLeft: 2 }}>
             Any Yahoo Finance ticker — stocks, bonds, ETFs, mutual funds
@@ -167,13 +320,7 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
               onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.hover; }}
               onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
             >
-              {/* Accent bar */}
-              <div style={{
-                width: 3, flexShrink: 0,
-                background: isSelected ? T.accent : 'transparent',
-                transition: 'background 0.12s',
-              }} />
-              {/* Content */}
+              <div style={{ width: 3, flexShrink: 0, background: isSelected ? T.accent : 'transparent', transition: 'background 0.12s' }} />
               <div
                 onClick={() => onSelect(globalIdx)}
                 style={{ flex: 1, padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minWidth: 0, cursor: 'pointer' }}
@@ -200,28 +347,24 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
                   )}
                 </div>
               </div>
-              {/* Favorite button */}
               <button
                 onClick={e => { e.stopPropagation(); onToggleFav?.(ticker); }}
                 title={favorites.has(ticker) ? 'Remove from favorites' : 'Add to favorites'}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: favorites.has(ticker) ? '#facc15' : T.textFaint,
-                  fontSize: 13, padding: '0 2px',
-                  flexShrink: 0, display: 'flex', alignItems: 'center',
+                  fontSize: 13, padding: '0 2px', flexShrink: 0, display: 'flex', alignItems: 'center',
                   transition: 'color 0.12s',
                 }}
                 onMouseEnter={e => { if (!favorites.has(ticker)) e.currentTarget.style.color = '#facc15'; }}
                 onMouseLeave={e => { if (!favorites.has(ticker)) e.currentTarget.style.color = T.textFaint; }}
               >{favorites.has(ticker) ? '★' : '☆'}</button>
-              {/* Remove button for all funds */}
               <button
                 onClick={e => { e.stopPropagation(); onRemoveFund(ticker); }}
                 title="Remove from watchlist"
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: T.textFaint, fontSize: 14, padding: '0 8px',
-                  flexShrink: 0, display: 'flex', alignItems: 'center',
+                  color: T.textFaint, fontSize: 14, padding: '0 8px', flexShrink: 0, display: 'flex', alignItems: 'center',
                   transition: 'color 0.12s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.color = T.negative}
