@@ -30,6 +30,9 @@ const BASE_SYSTEM_PROMPT = `You are GS Bot — a sharp, confident financial assi
 - \`search_news\` → search recent market headlines loaded in the dashboard
 - \`list_funds\` → list all tickers available for CAPM analysis
 
+## WATCHLIST DATA
+The system prompt includes the user's current watchlist with live prices and today's % change, sorted from best to worst performer. Use this data directly when answering questions like "what's moving the most?", "has X gone down today?", "which of my funds is up?", etc. For deeper historical context on a specific ticker, call \`get_fund_quote\` to get the 52-week range.
+
 **Always use tool results verbatim — never recompute or round differently.**
 
 ## MATH YOU CAN DO YOURSELF
@@ -64,6 +67,18 @@ function buildSystemPrompt(context) {
   if (context?.quote?.regularMarketPrice != null) {
     const p = Number(context.quote.regularMarketPrice).toFixed(2);
     lines.push(`Live price for \`${context.quote.symbol}\`: $${p}`);
+  }
+  if (Array.isArray(context?.funds) && context.funds.length > 0) {
+    const sorted = [...context.funds].sort((a, b) => (b.changePct ?? -Infinity) - (a.changePct ?? -Infinity));
+    const rows = sorted.map(f => {
+      const pct = f.changePct != null ? `${f.changePct >= 0 ? '+' : ''}${Number(f.changePct).toFixed(2)}%` : 'N/A';
+      const price = f.price != null ? `$${Number(f.price).toFixed(2)}` : 'N/A';
+      return `  ${f.ticker || f.id} | ${f.name || ''} | ${price} | ${pct}`;
+    });
+    lines.push(`\n## Watchlist (sorted by today's change, high → low)\nTicker | Name | Price | Change%\n${rows.join('\n')}`);
+    lines.push(`Top mover today: \`${sorted[0].ticker || sorted[0].id}\` (${sorted[0].changePct != null ? (sorted[0].changePct >= 0 ? '+' : '') + Number(sorted[0].changePct).toFixed(2) + '%' : 'N/A'})`);
+    const worst = sorted[sorted.length - 1];
+    lines.push(`Worst performer today: \`${worst.ticker || worst.id}\` (${worst.changePct != null ? (worst.changePct >= 0 ? '+' : '') + Number(worst.changePct).toFixed(2) + '%' : 'N/A'})`);
   }
   return lines.join('\n');
 }
