@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useT, MARKET_INDICES } from '../theme';
+import API_BASE from '../apiBase';
 
 function TickerItem({ t }) {
   const T = useT();
@@ -10,7 +11,7 @@ function TickerItem({ t }) {
         {t.price != null ? t.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
       </span>
       {t.chg != null && (
-        <span style={{ fontSize: 11, color: t.up ? '#22c55e' : '#ef4444', fontWeight: 500 }}>
+        <span style={{ fontSize: 11, color: t.up ? T.positive : T.negative, fontWeight: 500 }}>
           {t.up ? '+' : ''}{t.chg.toFixed(2)} ({t.up ? '+' : ''}{t.pct.toFixed(2)}%)
         </span>
       )}
@@ -26,7 +27,7 @@ export default function TickerBar() {
     const load = () => {
       Promise.all(
         MARKET_INDICES.map(({ sym, yahoo }) =>
-          fetch(`/yahoo-api/v8/finance/chart/${yahoo}?interval=1d&range=1d`)
+          fetch(`${API_BASE}/yahoo-api/v8/finance/chart/${yahoo}?interval=1d&range=1d`, { signal: AbortSignal.timeout(8000) })
             .then(r => r.json())
             .then(j => {
               const meta = j?.chart?.result?.[0]?.meta;
@@ -51,7 +52,7 @@ export default function TickerBar() {
     : MARKET_INDICES.map(m => ({ sym: m.sym, price: null, chg: null, pct: null, up: true }));
 
   return (
-    <div style={{ background: T.pageBg, borderBottom: `1px solid ${T.border}`, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+    <div style={{ background: T.panelBg, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${T.border}`, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
       <div style={{ display: 'flex', animation: 'tickerScroll 40s linear infinite', width: 'max-content' }}>
         {[...items, ...items].map((t, i) => <TickerItem key={i} t={t} />)}
       </div>
