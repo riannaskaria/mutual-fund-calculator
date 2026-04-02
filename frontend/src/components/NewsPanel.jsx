@@ -58,14 +58,20 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
   const [query, setQuery] = useState('');
   const searchTimeoutRef = useRef(null);
   const queryRef = useRef('');
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     if (onArticlesUpdate) onArticlesUpdate(articles);
   }, [articles, onArticlesUpdate]);
 
   const fetchNews = async (searchTerm, forceRefresh = false) => {
-    if (forceRefresh) setArticles([]);
-    setLoading(true);
+    if (forceRefresh && mountedRef.current) setArticles([]);
+    if (mountedRef.current) setLoading(true);
     try {
       const bust = forceRefresh ? `&_t=${Date.now()}` : '';
       const queries = searchTerm
@@ -82,6 +88,8 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
             .catch(() => [])
         )
       );
+
+      if (!mountedRef.current) return;
 
       const merged = allResults.flat();
       const seen = new Set();
@@ -100,7 +108,7 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
     } catch (err) {
       console.warn('News fetch failed:', err);
     }
-    setLoading(false);
+    if (mountedRef.current) setLoading(false);
   };
 
   useEffect(() => {

@@ -76,9 +76,12 @@ function buildSystemPrompt(context) {
       return `  ${f.ticker || f.id} | ${f.name || ''} | ${price} | ${pct}`;
     });
     lines.push(`\n## Watchlist (sorted by today's change, high → low)\nTicker | Name | Price | Change%\n${rows.join('\n')}`);
-    lines.push(`Top mover today: \`${sorted[0].ticker || sorted[0].id}\` (${sorted[0].changePct != null ? (sorted[0].changePct >= 0 ? '+' : '') + Number(sorted[0].changePct).toFixed(2) + '%' : 'N/A'})`);
-    const worst = sorted[sorted.length - 1];
-    lines.push(`Worst performer today: \`${worst.ticker || worst.id}\` (${worst.changePct != null ? (worst.changePct >= 0 ? '+' : '') + Number(worst.changePct).toFixed(2) + '%' : 'N/A'})`);
+    if (sorted.length >= 2) {
+      const fmtPct = f => f.changePct != null ? `${f.changePct >= 0 ? '+' : ''}${Number(f.changePct).toFixed(2)}%` : 'N/A';
+      lines.push(`Top mover today: \`${sorted[0].ticker || sorted[0].id}\` (${fmtPct(sorted[0])})`);
+      const worst = sorted[sorted.length - 1];
+      lines.push(`Worst performer today: \`${worst.ticker || worst.id}\` (${fmtPct(worst)})`);
+    }
   }
   return lines.join('\n');
 }
@@ -175,6 +178,8 @@ async function executeTool(name, args, context) {
     const { ticker, principal, years } = args;
     try {
       validateTicker(ticker);
+      if (typeof principal !== 'number' || principal <= 0) return { error: 'principal must be a positive number' };
+      if (typeof years !== 'number' || years <= 0 || !Number.isInteger(years)) return { error: 'years must be a positive integer' };
       const result = await calculate(ticker, principal, years);
       const fv = +result.futureValue.toFixed(2);
       return {
