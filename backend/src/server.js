@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 8080;
 
 // CORS — allow the configured frontend origin (or localhost in dev)
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
-app.use(cors());
+app.use(cors({ origin: FRONTEND_URL }));
 
 app.use(express.json({ limit: '2mb' }));
 

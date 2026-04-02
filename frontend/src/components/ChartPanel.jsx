@@ -636,10 +636,10 @@ function FundInformationTab({ ticker }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 760 }}>
-      {/* Quick facts — same pill style as Price Chart footer stats */}
+    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
+      {/* Left column: quick facts */}
       {quickFacts.some(f => !f.isPlaceholder) && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, width: 220 }}>
           {quickFacts.map(({ label, value, isPlaceholder }) => (
             <div key={label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '7px 14px' }}>
               <div style={{ fontSize: 9, color: T.textMute, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
@@ -648,19 +648,20 @@ function FundInformationTab({ ticker }) {
               </div>
             </div>
           ))}
+          <div style={{ fontSize: 9, color: T.textFaint, lineHeight: 1.5, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 4 }}>
+            Data is editorial and for reference only. Verify material facts independently before investing.
+          </div>
         </div>
       )}
 
-      {/* Long-form sections */}
-      {longItems.filter(f => !f.isPlaceholder).map(({ label, value }) => (
-        <div key={label} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
-          <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>{label}</div>
-          <div style={{ fontSize: 13, color: T.text, lineHeight: 1.65 }}>{value}</div>
-        </div>
-      ))}
-
-      <div style={{ fontSize: 9, color: T.textFaint, lineHeight: 1.5, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
-        Data is editorial and for reference only. Markets and prospectus details change — verify material facts independently before investing.
+      {/* Right column: long-form sections */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+        {longItems.filter(f => !f.isPlaceholder).map(({ label, value }) => (
+          <div key={label} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+            <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>{label}</div>
+            <div style={{ fontSize: 13, color: T.text, lineHeight: 1.65 }}>{value}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
