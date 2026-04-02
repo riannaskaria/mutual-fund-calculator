@@ -10,6 +10,16 @@ const baseURL = API_BASE + '/api';
 const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 async function handleResponse(response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (!contentType.includes('application/json')) {
+    const bodyPreview = (await response.text()).slice(0, 120).replace(/\s+/g, ' ');
+    throw new Error(
+      `Expected JSON but received ${contentType || 'unknown content-type'} from ${response.url}. ` +
+      `Preview: ${bodyPreview}`
+    );
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
     throw new Error(error.message || `HTTP ${response.status}`);
@@ -120,5 +130,81 @@ export async function fetchFutureValue(fundId, amount, years) {
   }
   const params = new URLSearchParams({ fundId, amount: String(amount), years: String(years) });
   const response = await fetch(`${baseURL}/future-value?${params}`);
+  return handleResponse(response);
+}
+
+export async function fetchFundDiscovery(limit = 8) {
+  if (useMock) {
+    return {
+      asOfDate: new Date().toISOString().slice(0, 10),
+      generatedAt: new Date().toISOString(),
+      stale: false,
+      funds: [],
+      scoring: { weights: { recentReturn: 0.35, volatility: 0.25, expenseRatio: 0.2, aum: 0.1, beta: 0.1 } },
+    };
+  }
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(`${baseURL}/discovery?${params}`);
+  return handleResponse(response);
+}
+
+export async function fetchFundDiscoveryBreakdown(ticker) {
+  if (useMock) return null;
+  const response = await fetch(`${baseURL}/discovery/fund/${encodeURIComponent(ticker)}`);
+  return handleResponse(response);
+}
+
+export async function fetchFundDiscoveryStatus() {
+  if (useMock) {
+    return {
+      lastAttemptAt: null,
+      lastSuccessAt: new Date().toISOString(),
+      lastError: null,
+      stale: false,
+      snapshotDate: new Date().toISOString().slice(0, 10),
+      fundCount: 0,
+    };
+  }
+  const response = await fetch(`${baseURL}/discovery/status`);
+  return handleResponse(response);
+}
+
+export async function refreshFundDiscovery() {
+  if (useMock) return { ok: true, generatedAt: new Date().toISOString(), stale: false, fallbackUsed: false };
+  const response = await fetch(`${baseURL}/discovery/refresh`, { method: 'POST' });
+  return handleResponse(response);
+}
+
+export async function logSearchEvent({ ticker, name, timestamp } = {}) {
+  if (useMock) return { ok: true };
+  const response = await fetch(`${baseURL}/trending/log-search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticker, name, timestamp }),
+  });
+  return handleResponse(response);
+}
+
+export async function logTradeEvent({ ticker, name, amount, timestamp } = {}) {
+  if (useMock) return { ok: true };
+  const response = await fetch(`${baseURL}/trending/log-trade`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticker, name, amount, timestamp }),
+  });
+  return handleResponse(response);
+}
+
+export async function fetchMostSearchedFunds(limit = 10) {
+  if (useMock) return { generatedAt: new Date().toISOString(), metric: 'most-searched', window: 'all-time', funds: [] };
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(`${baseURL}/trending/most-searched?${params}`);
+  return handleResponse(response);
+}
+
+export async function fetchMostTradedFunds(limit = 10) {
+  if (useMock) return { generatedAt: new Date().toISOString(), metric: 'most-traded', window: 'all-time', funds: [] };
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(`${baseURL}/trending/most-traded?${params}`);
   return handleResponse(response);
 }

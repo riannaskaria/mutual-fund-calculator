@@ -6,6 +6,9 @@ const axios   = require('axios');
 const fundsRouter = require('./routes/funds');
 const botRouter   = require('./routes/bot');
 const emailRouter = require('./routes/email');
+const discoveryRouter = require('./routes/discovery');
+const trendingRouter = require('./routes/trending');
+const { initializeFundDiscoveryRefresh } = require('./services/fundDiscoveryService');
 
 const app  = express();
 const PORT = process.env.PORT || 8080;
@@ -80,6 +83,21 @@ app.use('/google-news-rss', async (req, res) => {
 app.use('/api', fundsRouter);
 app.use('/api/bot', botRouter);
 app.use('/api/email', emailRouter);
+app.use('/api/discovery', discoveryRouter);
+app.use('/api/trending', trendingRouter);
+
+// Keep API responses JSON-only; do not fall through to index.html for missing API routes.
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    error: 'API route not found',
+    method: req.method,
+    path: req.originalUrl,
+  });
+});
+
+initializeFundDiscoveryRefresh().catch((err) => {
+  console.warn(`Fund discovery refresh initialization failed: ${err.message}`);
+});
 
 // ── Serve built frontend (production) ────────────────────────────────────────
 const DIST = path.join(__dirname, '../../frontend/dist');
