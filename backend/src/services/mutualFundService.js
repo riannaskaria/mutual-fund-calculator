@@ -80,9 +80,9 @@ function validateTicker(ticker) {
   }
 }
 
-// Cache beta + expectedReturn per ticker for 5 minutes so the screen calculator
+// Cache beta + expectedReturn per ticker for 2 minutes so the screen calculator
 // and the bot always use identical inputs regardless of live API fluctuations.
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 2 * 60 * 1000;
 const ratesCache = new Map(); // ticker → { beta, expectedReturnRate, expiresAt }
 
 async function fetchRates(ticker) {
@@ -112,4 +112,7 @@ async function calculate(ticker, principal, years) {
   return { ticker, principal, years, beta, expectedReturnRate, riskFreeRate: RISK_FREE_RATE, capmRate, futureValue };
 }
 
-module.exports = { getAllFunds, validateTicker, calculate };
+// S&P 500 proxy used for benchmark comparison in /api/compare
+const BENCHMARK_TICKER = 'VFIAX';
+
+module.exports = { getAllFunds, validateTicker, calculate, BENCHMARK_TICKER };

@@ -6,7 +6,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { getAllFunds, validateTicker, calculate } = require('../services/mutualFundService');
+const { getAllFunds, validateTicker, calculate, BENCHMARK_TICKER } = require('../services/mutualFundService');
 
 // GET /api/funds
 router.get('/funds', (req, res) => {
@@ -61,6 +61,47 @@ router.get('/future-value', async (req, res) => {
       capmRate: result.capmRate,
       beta: result.beta,
       expectedReturnRate: result.expectedReturnRate,
+      riskFreeRate: result.riskFreeRate,
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// GET /api/compare?ticker=AGTHX&principal=10000&years=10
+// Returns side-by-side CAPM projections for the fund vs. the S&P 500 benchmark (VFIAX)
+router.get('/compare', async (req, res) => {
+  const { ticker, principal, years } = req.query;
+
+  if (!ticker || ticker.trim() === '')
+    return res.status(400).json({ error: 'ticker is required' });
+  if (!principal || isNaN(principal) || Number(principal) <= 0)
+    return res.status(400).json({ error: 'principal must be greater than 0' });
+  if (!years || isNaN(years) || !Number.isInteger(Number(years)) || Number(years) < 1)
+    return res.status(400).json({ error: 'years must be an integer of at least 1' });
+
+  try {
+    validateTicker(ticker);
+    const [fund, benchmark] = await Promise.all([
+      calculate(ticker, Number(principal), Number(years)),
+      calculate(BENCHMARK_TICKER, Number(principal), Number(years)),
+    ]);
+    res.json({
+      fund: {
+        ticker: fund.ticker,
+        capmRate: fund.capmRate,
+        beta: fund.beta,
+        futureValue: fund.futureValue,
+      },
+      benchmark: {
+        ticker: benchmark.ticker,
+        capmRate: benchmark.capmRate,
+        beta: benchmark.beta,
+        futureValue: benchmark.futureValue,
+      },
+      excessReturn: fund.capmRate - benchmark.capmRate,
+      outperforms: fund.futureValue > benchmark.futureValue,
+      projectedDifference: fund.futureValue - benchmark.futureValue,
     });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });

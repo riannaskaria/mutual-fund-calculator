@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useT, TAG_COLORS, SOURCE_BRANDS } from '../theme';
+import API_BASE from '../apiBase';
 
 const NEWS_QUERIES = [
   'mutual funds investing',
@@ -49,17 +50,18 @@ function getDomain(source) {
   return SOURCE_BRANDS[source]?.domain || source.toLowerCase().replace(/[^a-z]/g, '') + '.com';
 }
 
-export default function NewsPanel({ onArticlesUpdate, embedded = false }) {
+export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggle }) {
   const T = useT();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [query, setQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState(null);
+  const searchTimeoutRef = useRef(null);
+  const queryRef = useRef('');
 
   useEffect(() => {
     if (onArticlesUpdate) onArticlesUpdate(articles);
-  }, [articles]);
+  }, [articles, onArticlesUpdate]);
 
   const fetchNews = async (searchTerm, forceRefresh = false) => {
     if (forceRefresh) setArticles([]);
@@ -72,7 +74,7 @@ export default function NewsPanel({ onArticlesUpdate, embedded = false }) {
 
       const allResults = await Promise.all(
         queries.map(q =>
-          fetch(`/google-news-rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en${bust}`, {
+          fetch(`${API_BASE}/google-news-rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en${bust}`, {
             signal: AbortSignal.timeout(8000),
           })
             .then(r => r.text())
@@ -103,39 +105,74 @@ export default function NewsPanel({ onArticlesUpdate, embedded = false }) {
 
   useEffect(() => {
     fetchNews();
-    const iv = setInterval(() => fetchNews(query), 600000);
+    const iv = setInterval(() => fetchNews(queryRef.current), 600000);
     return () => clearInterval(iv);
   }, []);
 
-  const handleSearch = (val) => {
+  const handleSearch = useCallback((val) => {
     setQuery(val);
-    if (searchTimeout) clearTimeout(searchTimeout);
-    setSearchTimeout(setTimeout(() => fetchNews(val.trim()), 500));
-  };
+    queryRef.current = val;
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => fetchNews(val.trim()), 500);
+  }, []);
+
+  if (collapsed) {
+    return (
+      <div
+        onClick={onToggle}
+        title="Show news"
+        style={{
+          width: 28, background: 'rgba(99,130,210,0.18)', border: '1px solid rgba(99,130,210,0.35)', borderRadius: 14,
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          paddingTop: 14, gap: 10, flexShrink: 0, cursor: 'pointer',
+          transition: 'background 0.15s', overflow: 'hidden',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,130,210,0.3)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,130,210,0.18)'}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(99,130,210,0.9)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span style={{ fontSize: 9, color: 'rgba(99,130,210,0.9)', writingMode: 'vertical-rl', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700 }}>
+          News{articles.length > 0 ? ` · ${articles.length}` : ''}
+        </span>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ width: embedded ? '100%' : 288, height: '100%', background: T.newsItemBg, borderLeft: embedded ? 'none' : `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
+    <div style={{ width: 288, background: T.newsItemBg, border: `1px solid ${T.border}`, borderRadius: 14, display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '11px 14px 10px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: T.text, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Market News</span>
           {lastUpdated && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '1px 6px' }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-              <span style={{ fontSize: 9, color: '#22c55e', fontWeight: 600, letterSpacing: '0.03em' }}>LIVE</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(24, 106, 222, 0.08)', border: '1px solid rgba(24, 106, 222, 0.22)', borderRadius: 10, padding: '1px 6px' }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: T.accent, display: 'inline-block' }} />
+              <span style={{ fontSize: 9, color: T.accent, fontWeight: 600, letterSpacing: '0.03em' }}>LIVE</span>
             </span>
           )}
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <button onClick={onToggle} title="Hide news"
+          style={{ background: 'rgba(99,130,210,0.18)', border: '1px solid rgba(99,130,210,0.35)', borderRadius: 5, cursor: 'pointer', padding: '4px 10px', display: 'flex', alignItems: 'center', transition: 'background 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,130,210,0.3)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,130,210,0.18)'}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(99,130,210,0.9)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
         <button onClick={() => fetchNews(query, true)}
           style={{ background: 'none', border: '1px solid #141f2e', borderRadius: 5, cursor: 'pointer', padding: '4px 5px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 0.15s' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#2a3a50'}
           onMouseLeave={e => e.currentTarget.style.borderColor = '#141f2e'}
           title="Refresh">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={loading ? '#22c55e' : '#446688'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={loading ? T.accent : T.accentSoft} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
           </svg>
         </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -151,7 +188,7 @@ export default function NewsPanel({ onArticlesUpdate, embedded = false }) {
             style={{ background: 'none', border: 'none', outline: 'none', fontSize: 11, color: T.textSub, flex: 1, width: 0 }}
           />
           {query && (
-            <button onClick={() => { setQuery(''); fetchNews(''); }}
+            <button onClick={() => { setQuery(''); queryRef.current = ''; fetchNews(''); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMute, padding: 0, fontSize: 14, lineHeight: 1, display: 'flex' }}>×</button>
           )}
         </div>
@@ -161,7 +198,7 @@ export default function NewsPanel({ onArticlesUpdate, embedded = false }) {
       <div className="news-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {loading && articles.length === 0 && (
           <div style={{ padding: '40px 14px', textAlign: 'center' }}>
-            <div style={{ width: 20, height: 20, border: '2px solid #1a2535', borderTopColor: '#22c55e', borderRadius: '50%', margin: '0 auto 10px', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ width: 20, height: 20, border: `2px solid ${T.spinnerTrack}`, borderTopColor: T.spinnerAccent, borderRadius: '50%', margin: '0 auto 10px', animation: 'spin 0.8s linear infinite' }} />
             <div style={{ fontSize: 11, color: '#334455' }}>Fetching latest news…</div>
           </div>
         )}
@@ -183,7 +220,7 @@ export default function NewsPanel({ onArticlesUpdate, embedded = false }) {
                   <img src={`https://www.google.com/s2/favicons?domain=${getDomain(item.source)}&sz=16`}
                     width={11} height={11} alt="" style={{ borderRadius: 2, flexShrink: 0 }}
                     onError={e => { e.target.style.display = 'none'; }} />
-                  <span style={{ fontSize: 9, color: brand?.color || '#446688', fontWeight: 700, letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.source}</span>
+                  <span style={{ fontSize: 9, color: brand?.color || T.accentSoft, fontWeight: 700, letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.source}</span>
                   <span style={{ marginLeft: 'auto', fontSize: 8, color: '#2a3f55', whiteSpace: 'nowrap', flexShrink: 0 }}>{timeAgo(item.time)}</span>
                 </div>
                 <div style={{ fontSize: 11, color: T.textSub, lineHeight: 1.45, fontWeight: 400 }}>{item.title}</div>

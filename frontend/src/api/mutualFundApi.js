@@ -4,8 +4,9 @@
  * Set VITE_USE_MOCK=true to use mock data when backend is not available.
  */
 import { mockMutualFunds, mockFutureValue } from './mockData';
+import API_BASE from '../apiBase';
 
-const baseURL = import.meta.env.VITE_API_URL || '/api';
+const baseURL = API_BASE + '/api';
 const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 async function handleResponse(response) {
@@ -48,7 +49,7 @@ export async function fetchYahooMutualFundScreener(count = 100) {
   const tickers = MUTUAL_FUND_TICKERS.slice(0, count);
   const results = await Promise.all(
     tickers.map(sym =>
-      fetch(`/yahoo-api/v8/finance/chart/${sym}?interval=1d&range=1d`, {
+      fetch(`${API_BASE}/yahoo-api/v8/finance/chart/${sym}?interval=1d&range=1d`, {
         signal: AbortSignal.timeout(8000),
       })
         .then(r => r.json())
@@ -81,7 +82,7 @@ export async function fetchYahooMutualFundScreener(count = 100) {
  * @param {string} ticker - e.g. "VFIAX"
  */
 export async function fetchYahooQuote(ticker) {
-  const res = await fetch(`/yahoo-api/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`);
+  const res = await fetch(`${API_BASE}/yahoo-api/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`);
   const json = await handleResponse(res);
   const meta = json?.chart?.result?.[0]?.meta;
   if (!meta) throw new Error('No quote data returned');
@@ -90,7 +91,7 @@ export async function fetchYahooQuote(ticker) {
 
 export async function fetchYahooPriceHistory(ticker, range = '1y', interval = '1d') {
   const response = await fetch(
-    `/yahoo-api/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${interval}&range=${range}`
+    `${API_BASE}/yahoo-api/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${interval}&range=${range}`
   );
   const json = await handleResponse(response);
   const result = json?.chart?.result?.[0];
