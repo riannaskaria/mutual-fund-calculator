@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useT } from '../theme';
 import API_BASE from '../apiBase';
+import { logTradeEvent } from '../api/mutualFundApi';
 
 // ─── persistence helpers ──────────────────────────────────────────────────────
 const STORAGE_KEY = 'mf_account_v1';
@@ -263,6 +264,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
         const ticker = addTicker.trim().toUpperCase();
         const amount = parseFloat(addAmount);
         if (!ticker || !amount || amount <= 0) return;
+        const fund = funds.find(f => (f.ticker || f.id) === ticker);
         const entry = { amount, note: addNote.trim() || null, date: new Date().toISOString() };
         setAccount(prev => {
             const existing = prev.positions[ticker] || [];
@@ -272,17 +274,22 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                 history: [{ ticker, amount, note: entry.note, date: entry.date }, ...prev.history].slice(0, 100),
             };
         });
+        logTradeEvent({ ticker, name: fund?.name, amount, timestamp: entry.date }).catch(() => { });
         setAddAmount('');
         setAddNote('');
-    }, [addTicker, addAmount, addNote]);
+    }, [addTicker, addAmount, addNote, funds]);
 
     const removePosition = useCallback((ticker) => {
+        const removedEntries = account.positions[ticker] || [];
+        const removedAmount = removedEntries.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        const fund = funds.find(f => (f.ticker || f.id) === ticker);
         setAccount(prev => {
             const next = { ...prev.positions };
             delete next[ticker];
             return { ...prev, positions: next };
         });
-    }, []);
+        logTradeEvent({ ticker, name: fund?.name, amount: removedAmount, timestamp: new Date().toISOString() }).catch(() => { });
+    }, [account.positions, funds]);
 
     const clearHistory = useCallback(() => {
         setAccount(prev => ({ ...prev, history: [] }));

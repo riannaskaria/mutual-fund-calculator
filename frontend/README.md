@@ -22,6 +22,10 @@ npm run dev
 
 Runs at [http://localhost:3000](http://localhost:3000). The Vite dev server proxies `/api` requests to `http://localhost:8080` (adjust in `vite.config.js` if your Java backend uses a different port).
 
+Important: this proxy is only active in `npm run dev`.
+- If you run `npm run preview` or serve `dist/` with a static server, set `VITE_API_BASE=http://localhost:8080` (or your deployed backend URL).
+- Otherwise `/api/...` requests go to the frontend origin and can return `index.html` instead of JSON.
+
 ### Mock mode (no backend)
 
 Create a `.env` file with:
@@ -39,6 +43,18 @@ npm run build
 ```
 
 Output is in `dist/`. Serve with any static host or your Java app.
+
+### Local preview with backend
+
+```bash
+# terminal 1
+cd backend
+npm start
+
+# terminal 2
+cd frontend
+VITE_API_BASE=http://localhost:8080 npm run preview -- --port 3000
+```
 
 ## Backend API contract
 

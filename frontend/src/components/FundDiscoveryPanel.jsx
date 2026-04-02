@@ -5,6 +5,7 @@ import {
   fetchFundDiscoveryBreakdown,
   fetchFundDiscoveryStatus,
   refreshFundDiscovery,
+  logSearchEvent,
 } from '../api/mutualFundApi';
 
 function fmtPct(value, digits = 2) {
@@ -180,7 +181,10 @@ export default function FundDiscoveryPanel({ compact = false }) {
             return (
               <button
                 key={fund.ticker}
-                onClick={() => setSelectedTicker(fund.ticker)}
+                onClick={() => {
+                  setSelectedTicker(fund.ticker);
+                  logSearchEvent({ ticker: fund.ticker, name: fund.name, timestamp: new Date().toISOString() }).catch(() => {});
+                }}
                 style={{
                   width: '100%',
                   textAlign: 'left',

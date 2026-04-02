@@ -10,6 +10,16 @@ const baseURL = API_BASE + '/api';
 const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
 async function handleResponse(response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (!contentType.includes('application/json')) {
+    const bodyPreview = (await response.text()).slice(0, 120).replace(/\s+/g, ' ');
+    throw new Error(
+      `Expected JSON but received ${contentType || 'unknown content-type'} from ${response.url}. ` +
+      `Preview: ${bodyPreview}`
+    );
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
     throw new Error(error.message || `HTTP ${response.status}`);
@@ -162,5 +172,39 @@ export async function fetchFundDiscoveryStatus() {
 export async function refreshFundDiscovery() {
   if (useMock) return { ok: true, generatedAt: new Date().toISOString(), stale: false, fallbackUsed: false };
   const response = await fetch(`${baseURL}/discovery/refresh`, { method: 'POST' });
+  return handleResponse(response);
+}
+
+export async function logSearchEvent({ ticker, name, timestamp } = {}) {
+  if (useMock) return { ok: true };
+  const response = await fetch(`${baseURL}/trending/log-search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticker, name, timestamp }),
+  });
+  return handleResponse(response);
+}
+
+export async function logTradeEvent({ ticker, name, amount, timestamp } = {}) {
+  if (useMock) return { ok: true };
+  const response = await fetch(`${baseURL}/trending/log-trade`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticker, name, amount, timestamp }),
+  });
+  return handleResponse(response);
+}
+
+export async function fetchMostSearchedFunds(limit = 10) {
+  if (useMock) return { generatedAt: new Date().toISOString(), metric: 'most-searched', window: 'all-time', funds: [] };
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(`${baseURL}/trending/most-searched?${params}`);
+  return handleResponse(response);
+}
+
+export async function fetchMostTradedFunds(limit = 10) {
+  if (useMock) return { generatedAt: new Date().toISOString(), metric: 'most-traded', window: 'all-time', funds: [] };
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(`${baseURL}/trending/most-traded?${params}`);
   return handleResponse(response);
 }

@@ -7,6 +7,7 @@ import TickerBar from './TickerBar';
 import PositionsPanel from './PositionsPanel';
 import FundHeader from './FundHeader';
 import ChartPanel from './ChartPanel';
+import TrendingPanel from './TrendingPanel';
 import NewsPanel from './NewsPanel';
 import GoldmanBot from './GoldmanBot';
 import SettingsPanel from './SettingsPanel';
@@ -448,6 +449,7 @@ export default function TradingDashboard() {
               onAddAlert={addAlert}
               onRemoveAlert={removeAlert}
             />
+            <TrendingPanel />
             <ChartPanel
               ticker={ticker}
               quote={quote}

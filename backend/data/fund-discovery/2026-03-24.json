@@ -1,0 +1,531 @@
+{
+  "asOfDate": "2026-03-24",
+  "generatedAt": "2026-03-24T19:38:15.454Z",
+  "stale": false,
+  "fallbackUsed": false,
+  "staleReason": null,
+  "universeSize": 12,
+  "trackedTickers": [
+    "FXAIX",
+    "VFIAX",
+    "VTSAX",
+    "FCNTX",
+    "VWENX",
+    "VIGAX",
+    "VVIAX",
+    "FDGRX",
+    "TRBCX",
+    "PRWCX",
+    "SWPPX",
+    "SWTSX"
+  ],
+  "scoring": {
+    "model": "rule-based-v1",
+    "weights": {
+      "recentReturn": 0.35,
+      "volatility": 0.25,
+      "expenseRatio": 0.2,
+      "aum": 0.1,
+      "beta": 0.1
+    },
+    "notes": {
+      "recentReturn": "0.6 * 1M return + 0.4 * 3M return",
+      "volatility": "63-trading-day annualized volatility",
+      "beta": "Distance-to-1 scoring for broad market alignment"
+    }
+  },
+  "funds": [
+    {
+      "ticker": "VVIAX",
+      "name": "Vanguard Value Index Fund;Admiral",
+      "score": 73.73,
+      "metrics": {
+        "recentReturnPct": -2.129490105473037,
+        "oneMonthReturnPct": -5.3042491632155215,
+        "threeMonthReturnPct": 2.632648481140689,
+        "annualizedVolatilityPct": 11.059047345711056,
+        "expenseRatioPct": 0.05,
+        "aumBillions": 120,
+        "beta": 0.02392269185997235
+      },
+      "subscores": {
+        "recentReturn": 95.83333333333334,
+        "volatility": 87.5,
+        "expenseRatio": 50,
+        "aum": 41.66666666666667,
+        "beta": 41.43536151159834
+      },
+      "weightedContributions": {
+        "recentReturn": 33.54166666666667,
+        "volatility": 21.875,
+        "expenseRatio": 10,
+        "aum": 4.166666666666667,
+        "beta": 4.143536151159834
+      },
+      "explainability": {
+        "topDrivers": [
+          "Recent return",
+          "Volatility control"
+        ],
+        "weakestFactor": "Market beta alignment",
+        "summary": "Strength from Recent return and Volatility control; limited by market beta alignment."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 1
+    },
+    {
+      "ticker": "SWPPX",
+      "name": "Schwab S&P 500 Index Fund",
+      "score": 69.64,
+      "metrics": {
+        "recentReturnPct": -3.7893671685724932,
+        "oneMonthReturnPct": -4.624927896195479,
+        "threeMonthReturnPct": -2.536026077138014,
+        "annualizedVolatilityPct": 12.30896788573727,
+        "expenseRatioPct": 0.02,
+        "aumBillions": 95,
+        "beta": 0.7311207487664249
+      },
+      "subscores": {
+        "recentReturn": 70.83333333333334,
+        "volatility": 62.5,
+        "expenseRatio": 91.66666666666667,
+        "aum": 25,
+        "beta": 83.86724492598549
+      },
+      "weightedContributions": {
+        "recentReturn": 24.791666666666668,
+        "volatility": 15.625,
+        "expenseRatio": 18.333333333333336,
+        "aum": 2.5,
+        "beta": 8.38672449259855
+      },
+      "explainability": {
+        "topDrivers": [
+          "Recent return",
+          "Low expense ratio"
+        ],
+        "weakestFactor": "AUM scale",
+        "summary": "Strength from Recent return and Low expense ratio; limited by aum scale."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 2
+    },
+    {
+      "ticker": "FXAIX",
+      "name": "Fidelity 500 Index Fund",
+      "score": 67.89,
+      "metrics": {
+        "recentReturnPct": -3.922972910592425,
+        "oneMonthReturnPct": -4.639258578005783,
+        "threeMonthReturnPct": -2.848544409472389,
+        "annualizedVolatilityPct": 12.198465981728361,
+        "expenseRatioPct": 0.02,
+        "aumBillions": 510,
+        "beta": 0.7874942874282743
+      },
+      "subscores": {
+        "recentReturn": 37.5,
+        "volatility": 79.16666666666666,
+        "expenseRatio": 91.66666666666667,
+        "aum": 79.16666666666666,
+        "beta": 87.24965724569645
+      },
+      "weightedContributions": {
+        "recentReturn": 13.125,
+        "volatility": 19.791666666666664,
+        "expenseRatio": 18.333333333333336,
+        "aum": 7.916666666666666,
+        "beta": 8.724965724569646
+      },
+      "explainability": {
+        "topDrivers": [
+          "Volatility control",
+          "Low expense ratio"
+        ],
+        "weakestFactor": "AUM scale",
+        "summary": "Strength from Volatility control and Low expense ratio; limited by aum scale."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 3
+    },
+    {
+      "ticker": "VFIAX",
+      "name": "Vanguard 500 Index Fund;Admiral",
+      "score": 64.32,
+      "metrics": {
+        "recentReturnPct": -3.915325007747319,
+        "oneMonthReturnPct": -4.640015440569811,
+        "threeMonthReturnPct": -2.8282893585135804,
+        "annualizedVolatilityPct": 12.225836736947345,
+        "expenseRatioPct": 0.04,
+        "aumBillions": 1240,
+        "beta": 0.7477912520859533
+      },
+      "subscores": {
+        "recentReturn": 45.83333333333333,
+        "volatility": 70.83333333333333,
+        "expenseRatio": 66.66666666666667,
+        "aum": 87.5,
+        "beta": 84.8674751251572
+      },
+      "weightedContributions": {
+        "recentReturn": 16.041666666666664,
+        "volatility": 17.708333333333332,
+        "expenseRatio": 13.333333333333336,
+        "aum": 8.75,
+        "beta": 8.48674751251572
+      },
+      "explainability": {
+        "topDrivers": [
+          "Volatility control",
+          "Recent return"
+        ],
+        "weakestFactor": "Market beta alignment",
+        "summary": "Strength from Volatility control and Recent return; limited by market beta alignment."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 4
+    },
+    {
+      "ticker": "VTSAX",
+      "name": "Vanguard Total Stock Market Index Fund;Admiral",
+      "score": 63.83,
+      "metrics": {
+        "recentReturnPct": -3.9106861998608715,
+        "oneMonthReturnPct": -4.709568906489657,
+        "threeMonthReturnPct": -2.712362139917696,
+        "annualizedVolatilityPct": 12.584181509066534,
+        "expenseRatioPct": 0.04,
+        "aumBillions": 1560,
+        "beta": 0.7362523263430516
+      },
+      "subscores": {
+        "recentReturn": 54.166666666666664,
+        "volatility": 54.16666666666667,
+        "expenseRatio": 66.66666666666667,
+        "aum": 95.83333333333334,
+        "beta": 84.17513958058309
+      },
+      "weightedContributions": {
+        "recentReturn": 18.958333333333332,
+        "volatility": 13.541666666666668,
+        "expenseRatio": 13.333333333333336,
+        "aum": 9.583333333333334,
+        "beta": 8.41751395805831
+      },
+      "explainability": {
+        "topDrivers": [
+          "Recent return",
+          "Volatility control"
+        ],
+        "weakestFactor": "Market beta alignment",
+        "summary": "Strength from Recent return and Volatility control; limited by market beta alignment."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 5
+    },
+    {
+      "ticker": "PRWCX",
+      "name": "T. Rowe Price Capital Appreciation Fund",
+      "score": 62.4,
+      "metrics": {
+        "recentReturnPct": -2.4191869962507426,
+        "oneMonthReturnPct": -2.715568834137994,
+        "threeMonthReturnPct": -1.9746142394198647,
+        "annualizedVolatilityPct": 7.352425610605512,
+        "expenseRatioPct": 0.7,
+        "aumBillions": 75,
+        "beta": -0.19666719515661857
+      },
+      "subscores": {
+        "recentReturn": 87.5,
+        "volatility": 95.83333333333333,
+        "expenseRatio": 20.833333333333343,
+        "aum": 8.333333333333332,
+        "beta": 28.199968290602882
+      },
+      "weightedContributions": {
+        "recentReturn": 30.624999999999996,
+        "volatility": 23.958333333333332,
+        "expenseRatio": 4.166666666666669,
+        "aum": 0.8333333333333333,
+        "beta": 2.8199968290602886
+      },
+      "explainability": {
+        "topDrivers": [
+          "Recent return",
+          "Volatility control"
+        ],
+        "weakestFactor": "AUM scale",
+        "summary": "Strength from Recent return and Volatility control; limited by aum scale."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 6
+    },
+    {
+      "ticker": "SWTSX",
+      "name": "Schwab Total Stock Market Index Fund",
+      "score": 61.7,
+      "metrics": {
+        "recentReturnPct": -3.83548790990096,
+        "oneMonthReturnPct": -4.750445267865509,
+        "threeMonthReturnPct": -2.4630518729541366,
+        "annualizedVolatilityPct": 12.72108050413391,
+        "expenseRatioPct": 0.03,
+        "aumBillions": 120,
+        "beta": 0.7280749567525462
+      },
+      "subscores": {
+        "recentReturn": 62.5,
+        "volatility": 45.833333333333336,
+        "expenseRatio": 79.16666666666666,
+        "aum": 41.66666666666667,
+        "beta": 83.68449740515277
+      },
+      "weightedContributions": {
+        "recentReturn": 21.875,
+        "volatility": 11.458333333333334,
+        "expenseRatio": 15.833333333333332,
+        "aum": 4.166666666666667,
+        "beta": 8.368449740515278
+      },
+      "explainability": {
+        "topDrivers": [
+          "Recent return",
+          "Low expense ratio"
+        ],
+        "weakestFactor": "AUM scale",
+        "summary": "Strength from Recent return and Low expense ratio; limited by aum scale."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 7
+    },
+    {
+      "ticker": "FDGRX",
+      "name": "Fidelity Growth Company Fund",
+      "score": 40.54,
+      "metrics": {
+        "recentReturnPct": -3.778102458751943,
+        "oneMonthReturnPct": -3.801583622873698,
+        "threeMonthReturnPct": -3.742880712569311,
+        "annualizedVolatilityPct": 20.046545701589594,
+        "expenseRatioPct": 0.79,
+        "aumBillions": 75,
+        "beta": 0.7431763990679384
+      },
+      "subscores": {
+        "recentReturn": 79.16666666666666,
+        "volatility": 4.166666666666657,
+        "expenseRatio": 12.5,
+        "aum": 8.333333333333332,
+        "beta": 84.5905839440763
+      },
+      "weightedContributions": {
+        "recentReturn": 27.70833333333333,
+        "volatility": 1.0416666666666643,
+        "expenseRatio": 2.5,
+        "aum": 0.8333333333333333,
+        "beta": 8.45905839440763
+      },
+      "explainability": {
+        "topDrivers": [
+          "Recent return",
+          "Market beta alignment"
+        ],
+        "weakestFactor": "AUM scale",
+        "summary": "Strength from Recent return and Market beta alignment; limited by aum scale."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 8
+    },
+    {
+      "ticker": "VIGAX",
+      "name": "Vanguard Growth Index Fund;Admiral",
+      "score": 39.7,
+      "metrics": {
+        "recentReturnPct": -5.350936352089165,
+        "oneMonthReturnPct": -3.9981648144284296,
+        "threeMonthReturnPct": -7.380093658580266,
+        "annualizedVolatilityPct": 15.829415545035841,
+        "expenseRatioPct": 0.05,
+        "aumBillions": 190,
+        "beta": 1.32746148382529
+      },
+      "subscores": {
+        "recentReturn": 20.833333333333336,
+        "volatility": 29.166666666666657,
+        "expenseRatio": 50,
+        "aum": 70.83333333333334,
+        "beta": 80.35231097048259
+      },
+      "weightedContributions": {
+        "recentReturn": 7.291666666666667,
+        "volatility": 7.291666666666664,
+        "expenseRatio": 10,
+        "aum": 7.083333333333335,
+        "beta": 8.035231097048259
+      },
+      "explainability": {
+        "topDrivers": [
+          "Low expense ratio",
+          "Market beta alignment"
+        ],
+        "weakestFactor": "AUM scale",
+        "summary": "Strength from Low expense ratio and Market beta alignment; limited by aum scale."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 9
+    },
+    {
+      "ticker": "FCNTX",
+      "name": "Fidelity Contrafund",
+      "score": 34.21,
+      "metrics": {
+        "recentReturnPct": -4.482992419878046,
+        "oneMonthReturnPct": -5.523966547492243,
+        "threeMonthReturnPct": -2.921531228456751,
+        "annualizedVolatilityPct": 13.780552669912987,
+        "expenseRatioPct": 0.82,
+        "aumBillions": 140,
+        "beta": 0.5904826952732799
+      },
+      "subscores": {
+        "recentReturn": 29.166666666666668,
+        "volatility": 37.5,
+        "expenseRatio": 4.166666666666657,
+        "aum": 62.5,
+        "beta": 75.4289617163968
+      },
+      "weightedContributions": {
+        "recentReturn": 10.208333333333334,
+        "volatility": 9.375,
+        "expenseRatio": 0.8333333333333315,
+        "aum": 6.25,
+        "beta": 7.54289617163968
+      },
+      "explainability": {
+        "topDrivers": [
+          "Recent return",
+          "Volatility control"
+        ],
+        "weakestFactor": "Low expense ratio",
+        "summary": "Strength from Recent return and Volatility control; limited by low expense ratio."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 10
+    },
+    {
+      "ticker": "TRBCX",
+      "name": "T. Rowe Price Blue Chip Growth Fund",
+      "score": 27.61,
+      "metrics": {
+        "recentReturnPct": -6.4777795076867815,
+        "oneMonthReturnPct": -4.857830949233749,
+        "threeMonthReturnPct": -8.90770234536633,
+        "annualizedVolatilityPct": 16.16928690327011,
+        "expenseRatioPct": 0.69,
+        "aumBillions": 95,
+        "beta": 1.051806267047267
+      },
+      "subscores": {
+        "recentReturn": 12.5,
+        "volatility": 20.833333333333343,
+        "expenseRatio": 29.166666666666657,
+        "aum": 25,
+        "beta": 96.89162397716399
+      },
+      "weightedContributions": {
+        "recentReturn": 4.375,
+        "volatility": 5.208333333333336,
+        "expenseRatio": 5.833333333333332,
+        "aum": 2.5,
+        "beta": 9.6891623977164
+      },
+      "explainability": {
+        "topDrivers": [
+          "Market beta alignment",
+          "Low expense ratio"
+        ],
+        "weakestFactor": "AUM scale",
+        "summary": "Strength from Market beta alignment and Low expense ratio; limited by aum scale."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 11
+    },
+    {
+      "ticker": "VWENX",
+      "name": "Vanguard Wellington Fund;Admiral",
+      "score": 20.29,
+      "metrics": {
+        "recentReturnPct": -7.460414394330825,
+        "oneMonthReturnPct": -4.789343115841356,
+        "threeMonthReturnPct": -11.467021312065025,
+        "annualizedVolatilityPct": 19.201062810986187,
+        "expenseRatioPct": 0.16,
+        "aumBillions": 130,
+        "beta": -0.20179375818326845
+      },
+      "subscores": {
+        "recentReturn": 4.166666666666666,
+        "volatility": 12.5,
+        "expenseRatio": 37.5,
+        "aum": 54.166666666666664,
+        "beta": 27.892374509003886
+      },
+      "weightedContributions": {
+        "recentReturn": 1.458333333333333,
+        "volatility": 3.125,
+        "expenseRatio": 7.5,
+        "aum": 5.416666666666667,
+        "beta": 2.789237450900389
+      },
+      "explainability": {
+        "topDrivers": [
+          "Low expense ratio",
+          "AUM scale"
+        ],
+        "weakestFactor": "Recent return",
+        "summary": "Strength from Low expense ratio and AUM scale; limited by recent return."
+      },
+      "sources": {
+        "daily": "Yahoo Finance + Newton Analytics",
+        "slow": "Curated slow-metrics table (expense ratio, AUM)"
+      },
+      "rank": 12
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useT, getFundTicker, getFundBaseName } from '../theme';
+import { logSearchEvent } from '../api/mutualFundApi';
 
 const PAGE_SIZE = 20;
 
@@ -7,6 +8,7 @@ function useTickerSearch(query) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef(null);
+  const lastLoggedQueryRef = useRef('');
 
   useEffect(() => {
     const q = query.trim();
@@ -22,6 +24,12 @@ function useTickerSearch(query) {
         );
         const data = await res.json();
         setResults(data?.quotes?.filter(q => q.symbol) ?? []);
+
+        // Log each unique lookup query once per input change cycle.
+        if (q.length >= 2 && lastLoggedQueryRef.current !== q.toUpperCase()) {
+          lastLoggedQueryRef.current = q.toUpperCase();
+          logSearchEvent({ ticker: q.toUpperCase(), timestamp: new Date().toISOString() }).catch(() => {});
+        }
       } catch {
         setResults([]);
       } finally {
