@@ -7,7 +7,34 @@ import { useT } from '../theme';
 import { fetchYahooPriceHistory } from '../api/mutualFundApi';
 import { getFundInformationRows } from '../data/fundInformation';
 
-const TABS = ['Price Chart', 'CAPM Calculator', 'Information'];
+const TABS = ['Price Chart', 'CAPM Calculator', 'Information', 'My Notes'];
+
+const NOTES_STORAGE_KEY = 'mfc-fund-notes-v1';
+
+function loadFundNotesMap() {
+  try {
+    const raw = localStorage.getItem(NOTES_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistFundNote(ticker, text) {
+  if (!ticker) return;
+  const map = loadFundNotesMap();
+  const key = ticker.toUpperCase();
+  const trimmed = text.trim();
+  if (trimmed === '') delete map[key];
+  else map[key] = text;
+  try {
+    localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    /* quota or private mode */
+  }
+}
 
 const CONTRIB_FREQUENCIES = [
   { id: 'weekly', label: 'Weekly', periodsPerYear: 52, suffix: '/wk' },
@@ -667,6 +694,87 @@ function FundInformationTab({ ticker }) {
   );
 }
 
+function MyNotesTab({ ticker }) {
+  const T = useT();
+  const [text, setText] = useState(() => {
+    if (!ticker) return '';
+    const map = loadFundNotesMap();
+    return map[ticker.toUpperCase()] || '';
+  });
+
+  useEffect(() => {
+    const map = loadFundNotesMap();
+    const key = (ticker || '').toUpperCase();
+    setText(key ? (map[key] || '') : '');
+  }, [ticker]);
+
+  const onChange = (e) => {
+    const v = e.target.value;
+    setText(v);
+    persistFundNote(ticker, v);
+  };
+
+  const clear = () => {
+    setText('');
+    persistFundNote(ticker, '');
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 720 }}>
+      <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+        Notes for {ticker || '—'}
+      </div>
+      <textarea
+        value={text}
+        onChange={onChange}
+        placeholder="Jot down why you are watching this fund, target allocation, reminders…"
+        spellCheck
+        style={{
+          width: '100%',
+          minHeight: 220,
+          resize: 'vertical',
+          boxSizing: 'border-box',
+          background: T.inputBg,
+          border: `1px solid ${T.border}`,
+          borderRadius: 8,
+          padding: '12px 14px',
+          fontSize: 13,
+          lineHeight: 1.6,
+          color: T.text,
+          outline: 'none',
+          fontFamily: 'inherit',
+          transition: 'border-color 0.15s',
+        }}
+        onFocus={(e) => { e.target.style.borderColor = T.focusRing; }}
+        onBlur={(e) => { e.target.style.borderColor = T.border; }}
+      />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ fontSize: 10, color: T.textFaint, lineHeight: 1.5, maxWidth: 480 }}>
+          Stored only in this browser on this device. Clearing site data will remove notes.
+        </div>
+        <button
+          type="button"
+          onClick={clear}
+          disabled={!text}
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            padding: '6px 14px',
+            borderRadius: 9999,
+            border: `1px solid ${T.border}`,
+            background: T.cardBg,
+            color: text ? T.textMute : T.textFaint,
+            cursor: text ? 'pointer' : 'not-allowed',
+            opacity: text ? 1 : 0.65,
+          }}
+        >
+          Clear note
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ChartPanel({ ticker, quote, investmentAmount, years, futureValue, calculating, onCalculate, setInvestmentAmount, setYears, calcHistory }) {
   const T = useT();
   const [activeTab, setActiveTab] = useState('Price Chart');
@@ -717,6 +825,7 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
           />
         )}
         {activeTab === 'Information' && <FundInformationTab ticker={ticker} />}
+        {activeTab === 'My Notes' && <MyNotesTab ticker={ticker} />}
       </div>
     </div>
   );
