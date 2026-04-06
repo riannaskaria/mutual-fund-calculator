@@ -126,6 +126,30 @@ function fmtPctRatio(x, digits = 2) {
   return `${(x * 100).toFixed(digits)}%`;
 }
 
+/** Plain-language hints for the Quant Analysis tab (shown in a chevron disclosure). */
+const QUANT_METRIC_HELP = [
+  {
+    title: 'Period return',
+    body: 'How much the fund gained or lost from the first trading day to the last day in the range you picked—like checking the score at the start and end of a game.',
+  },
+  {
+    title: 'Annualized return',
+    body: 'A “smoothed” yearly rate that matches that same start-to-finish result if it repeated in an even way. Useful for comparing different time ranges; it is not a prediction of what will happen next year.',
+  },
+  {
+    title: 'Annualized volatility',
+    body: 'How much the price tended to bounce around day to day, expressed as a yearly-style number. Higher usually means a bumpier ride (bigger ups and downs); lower usually means calmer daily moves.',
+  },
+  {
+    title: 'Max drawdown',
+    body: 'The worst drop from a peak to a later low during the period—think of it as the steepest slide from a high point before things recovered at least somewhat. It helps describe stress in a bad stretch.',
+  },
+  {
+    title: 'Normalized price (start = 100)',
+    body: 'The same price path, but scaled so the first day equals 100. That makes it easier to see the shape of the move without focusing on the dollar price of one share.',
+  },
+];
+
 function fmtMoney(v) {
   if (v == null) return '—';
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
@@ -775,6 +799,8 @@ function QuantAnalysisTab({ ticker }) {
   const [raw, setRaw] = useState({ data: [] });
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [quantHelpOpen, setQuantHelpOpen] = useState(false);
+  const [quantHelpHover, setQuantHelpHover] = useState(false);
 
   useEffect(() => {
     if (!ticker) return;
@@ -858,6 +884,68 @@ function QuantAnalysisTab({ ticker }) {
             )}
             {statCard('Ann. volatility', stats.volAnnual != null ? fmtPctRatio(stats.volAnnual) : '—', 'σ of daily log returns × √252')}
             {statCard('Max drawdown', fmtPctRatio(stats.maxDrawdown), 'Peak-to-trough on daily closes')}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <button
+              type="button"
+              onClick={() => setQuantHelpOpen((o) => !o)}
+              aria-expanded={quantHelpOpen}
+              onMouseEnter={() => setQuantHelpHover(true)}
+              onMouseLeave={() => setQuantHelpHover(false)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                padding: '10px 14px',
+                borderRadius: 8,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                textAlign: 'left',
+                background: quantHelpOpen || quantHelpHover ? T.hover : 'transparent',
+                transition: 'background 0.15s ease',
+              }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>What do these metrics mean?</span>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={T.textMute}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  flexShrink: 0,
+                  transform: quantHelpOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                }}
+                aria-hidden
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {quantHelpOpen && (
+              <div
+                style={{
+                  padding: '4px 14px 2px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 14,
+                }}
+              >
+                {QUANT_METRIC_HELP.map(({ title, body }) => (
+                  <div key={title}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: T.text, marginBottom: 4 }}>{title}</div>
+                    <div style={{ fontSize: 12, color: T.textSub, lineHeight: 1.55 }}>{body}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
