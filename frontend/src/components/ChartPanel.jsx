@@ -7,7 +7,7 @@ import { useT } from '../theme';
 import { fetchYahooPriceHistory } from '../api/mutualFundApi';
 import { getFundInformationRows } from '../data/fundInformation';
 
-const TABS = ['Price Chart', 'CAPM Calculator', 'Information', 'My Notes'];
+const TABS = ['Price Chart', 'CAPM Calculator', 'Information', 'Quant Analysis', 'My Notes'];
 
 const NOTES_STORAGE_KEY = 'mfc-fund-notes-v1';
 
@@ -50,6 +50,81 @@ const PRICE_RANGES = [
   { label: '3M', range: '3mo', interval: '1d' },
   { label: '1Y', range: '1y', interval: '1d' },
 ];
+
+/** Daily EOD ranges for quant stats (aligned with Yahoo chart API). */
+const QUANT_RANGES = [
+  { label: '3M', range: '3mo', interval: '1d' },
+  { label: '1Y', range: '1y', interval: '1d' },
+  { label: '5Y', range: '5y', interval: '1d' },
+];
+
+const MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000;
+
+/**
+ * @param {{ time: number, value: number }[]} series ascending by time, daily closes
+ * @returns {null | {
+ *   totalReturn: number,
+ *   annualizedReturn: number | null,
+ *   volAnnual: number | null,
+ *   maxDrawdown: number,
+ *   n: number,
+ *   startDate: number,
+ *   endDate: number,
+ *   years: number,
+ *   normSeries: { time: number, idx: number }[],
+ * }}
+ */
+function computeQuantStats(series) {
+  const pts = series.filter(d => d.value != null && d.value > 0);
+  if (pts.length < 2) return null;
+  const p0 = pts[0].value;
+  const pN = pts[pts.length - 1].value;
+  const totalReturn = (pN / p0) - 1;
+  const ms = pts[pts.length - 1].time - pts[0].time;
+  const years = ms / MS_PER_YEAR;
+  const annualizedReturn = years >= 0.08
+    ? (pN / p0) ** (1 / years) - 1
+    : null;
+
+  const logReturns = [];
+  for (let i = 1; i < pts.length; i++) {
+    logReturns.push(Math.log(pts[i].value / pts[i - 1].value));
+  }
+  let volAnnual = null;
+  if (logReturns.length >= 2) {
+    const mean = logReturns.reduce((a, b) => a + b, 0) / logReturns.length;
+    const n = logReturns.length;
+    const variance = logReturns.reduce((acc, lr) => acc + (lr - mean) ** 2, 0) / (n - 1);
+    volAnnual = Math.sqrt(Math.max(0, variance)) * Math.sqrt(252);
+  }
+
+  let peak = pts[0].value;
+  let maxDrawdown = 0;
+  for (const { value: p } of pts) {
+    if (p > peak) peak = p;
+    const dd = (p - peak) / peak;
+    if (dd < maxDrawdown) maxDrawdown = dd;
+  }
+
+  const normSeries = pts.map(({ time, value }) => ({ time, idx: (value / p0) * 100 }));
+
+  return {
+    totalReturn,
+    annualizedReturn,
+    volAnnual,
+    maxDrawdown,
+    n: pts.length,
+    startDate: pts[0].time,
+    endDate: pts[pts.length - 1].time,
+    years,
+    normSeries,
+  };
+}
+
+function fmtPctRatio(x, digits = 2) {
+  if (x == null || Number.isNaN(x)) return '—';
+  return `${(x * 100).toFixed(digits)}%`;
+}
 
 function fmtMoney(v) {
   if (v == null) return '—';
@@ -694,6 +769,159 @@ function FundInformationTab({ ticker }) {
   );
 }
 
+function QuantAnalysisTab({ ticker }) {
+  const T = useT();
+  const [rangeLabel, setRangeLabel] = useState('1Y');
+  const [raw, setRaw] = useState({ data: [] });
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+
+  useEffect(() => {
+    if (!ticker) return;
+    const cfg = QUANT_RANGES.find(r => r.label === rangeLabel) ?? QUANT_RANGES[1];
+    setFetchError(null);
+    setLoading(true);
+    fetchYahooPriceHistory(ticker, cfg.range, cfg.interval)
+      .then(({ data }) => {
+        setRaw({ data: data || [] });
+      })
+      .catch((err) => {
+        console.warn('Quant analysis fetch failed:', err);
+        setFetchError(err?.message || 'Could not load price history');
+        setRaw({ data: [] });
+      })
+      .finally(() => setLoading(false));
+  }, [ticker, rangeLabel]);
+
+  const stats = useMemo(() => computeQuantStats(raw.data), [raw.data]);
+
+  const statCard = (label, value, sub) => (
+    <div key={label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '10px 14px', minWidth: 0 }}>
+      <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{value}</div>
+      {sub && <div style={{ fontSize: 10, color: T.textFaint, marginTop: 4 }}>{sub}</div>}
+    </div>
+  );
+
+  if (!ticker) {
+    return (
+      <div style={{ fontSize: 12, color: T.textMute }}>Select a fund to see quant metrics.</div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <span style={{ fontSize: 10, color: T.textMute, fontWeight: 600, marginRight: 4 }}>Range</span>
+        {QUANT_RANGES.map(r => (
+          <button
+            key={r.label}
+            type="button"
+            onClick={() => setRangeLabel(r.label)}
+            style={{
+              background: rangeLabel === r.label ? T.accent : 'transparent',
+              border: 'none',
+              borderRadius: 9999,
+              padding: '4px 14px',
+              fontSize: 11,
+              color: rangeLabel === r.label ? '#fff' : T.textMute,
+              cursor: 'pointer',
+              fontWeight: rangeLabel === r.label ? 600 : 400,
+            }}
+          >{r.label}</button>
+        ))}
+      </div>
+
+      {fetchError && (
+        <div style={{ fontSize: 12, color: T.negative }}>{fetchError}</div>
+      )}
+
+      {loading && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0' }}>
+          <div style={{ width: 16, height: 16, border: `2px solid ${T.spinnerTrack}`, borderTopColor: T.spinnerAccent, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ fontSize: 12, color: T.textMute }}>Loading daily closes…</span>
+        </div>
+      )}
+
+      {!loading && !fetchError && stats && (
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: 10,
+          }}>
+            {statCard('Period return', fmtPctRatio(stats.totalReturn), `≈ ${stats.n} trading days`)}
+            {statCard(
+              'Annualized return',
+              stats.annualizedReturn != null ? fmtPctRatio(stats.annualizedReturn) : '—',
+              stats.annualizedReturn != null ? 'CAGR-style from first to last close' : 'Need a longer window',
+            )}
+            {statCard('Ann. volatility', stats.volAnnual != null ? fmtPctRatio(stats.volAnnual) : '—', 'σ of daily log returns × √252')}
+            {statCard('Max drawdown', fmtPctRatio(stats.maxDrawdown), 'Peak-to-trough on daily closes')}
+          </div>
+
+          <div>
+            <div style={{ fontSize: 10, color: T.textMute, fontWeight: 600, marginBottom: 6 }}>Normalized price (start = 100)</div>
+            <div style={{ width: '100%', height: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats.normSeries} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+                  <defs>
+                    <linearGradient id={`qa_${ticker}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={T.accent} stopOpacity={0.2} />
+                      <stop offset="95%" stopColor={T.accent} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
+                  <XAxis
+                    dataKey="time"
+                    tickFormatter={(t) => new Date(t).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
+                    tick={{ fontSize: 9, fill: T.textMute }}
+                    axisLine={false}
+                    tickLine={false}
+                    minTickGap={40}
+                  />
+                  <YAxis
+                    domain={['auto', 'auto']}
+                    tick={{ fontSize: 9, fill: T.textMute }}
+                    tickFormatter={(v) => v.toFixed(0)}
+                    axisLine={false}
+                    tickLine={false}
+                    width={36}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const row = payload[0].payload;
+                      return (
+                        <div style={{ background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '6px 10px' }}>
+                          <div style={{ fontSize: 9, color: T.textSub, marginBottom: 2 }}>
+                            {new Date(row.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>Index {row.idx?.toFixed(2)}</div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Area type="monotone" dataKey="idx" stroke={T.accent} strokeWidth={1.5} fill={`url(#qa_${ticker})`} dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 9, color: T.textFaint, lineHeight: 1.55, maxWidth: 640 }}>
+            Based on Yahoo Finance daily closes (NAV) for the selected range. Volatility is a simple historical estimate; it is not a forecast.
+            Past performance does not guarantee future results.
+          </div>
+        </>
+      )}
+
+      {!loading && !fetchError && !stats && (
+        <div style={{ fontSize: 12, color: T.textMute }}>Not enough price points to compute metrics for this range.</div>
+      )}
+    </div>
+  );
+}
+
 function MyNotesTab({ ticker }) {
   const T = useT();
   const [text, setText] = useState(() => {
@@ -825,6 +1053,7 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
           />
         )}
         {activeTab === 'Information' && <FundInformationTab ticker={ticker} />}
+        {activeTab === 'Quant Analysis' && <QuantAnalysisTab ticker={ticker} />}
         {activeTab === 'My Notes' && <MyNotesTab ticker={ticker} />}
       </div>
     </div>
