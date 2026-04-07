@@ -99,6 +99,7 @@ export async function fetchYahooQuote(ticker) {
   return meta;
 }
 
+
 export async function fetchYahooPriceHistory(ticker, range = '1y', interval = '1d') {
   const response = await fetch(
     `${API_BASE}/yahoo-api/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${interval}&range=${range}`
@@ -206,5 +207,16 @@ export async function fetchMostTradedFunds(limit = 10) {
   if (useMock) return { generatedAt: new Date().toISOString(), metric: 'most-traded', window: 'all-time', funds: [] };
   const params = new URLSearchParams({ limit: String(limit) });
   const response = await fetch(`${baseURL}/trending/most-traded?${params}`);
+  return handleResponse(response);
+}
+
+/**
+ * GET rich stock/ETF/fund info via backend (handles Yahoo Finance crumb auth).
+ * @param {string} ticker
+ */
+export async function fetchStockInfo(ticker) {
+  const response = await fetch(`${baseURL}/stock-info/${encodeURIComponent(ticker)}`, {
+    signal: AbortSignal.timeout(15000),
+  });
   return handleResponse(response);
 }

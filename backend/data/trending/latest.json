@@ -1,11 +1,23 @@
 {
-  "updatedAt": "2026-04-02T09:11:53.800Z",
+  "updatedAt": "2026-04-07T19:29:05.076Z",
   "searches": {
     "VFIAX": {
       "ticker": "VFIAX",
       "name": "Vanguard 500 Index Fund Admiral",
       "count": 1,
       "lastSearchedAt": "2026-04-02T09:12:00.000Z"
+    },
+    "GO": {
+      "ticker": "GO",
+      "name": "GO",
+      "count": 1,
+      "lastSearchedAt": "2026-04-07T19:29:02.597Z"
+    },
+    "WAL": {
+      "ticker": "WAL",
+      "name": "WAL",
+      "count": 1,
+      "lastSearchedAt": "2026-04-07T19:29:05.071Z"
     }
   },
   "trades": {

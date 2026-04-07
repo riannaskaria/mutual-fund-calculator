@@ -4,7 +4,7 @@
   "description": "Mutual Fund Calculator Backend - Node.js/Express",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node --max-http-header-size=65536 src/server.js"
   },
   "dependencies": {
     "@getbrevo/brevo": "^5.0.3",

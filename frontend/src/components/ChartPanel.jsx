@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import { useT } from '../theme';
-import { fetchYahooPriceHistory } from '../api/mutualFundApi';
+import { fetchYahooPriceHistory, fetchStockInfo } from '../api/mutualFundApi';
 import { getFundInformationRows } from '../data/fundInformation';
 
 const TABS = ['Price Chart', 'CAPM Calculator', 'Information', 'Quant Analysis', 'My Notes'];
@@ -732,63 +732,261 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
   );
 }
 
-function FundInformationTab({ ticker }) {
+function QuickFactCard({ label, value, T }) {
+  return (
+    <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '7px 14px' }}>
+      <div style={{ fontSize: 9, color: T.textMute, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{value}</div>
+    </div>
+  );
+}
+
+function FundInformationTab({ ticker, quote }) {
   const T = useT();
   const rows = getFundInformationRows(ticker);
-  const byKey = Object.fromEntries(rows.map(r => [
-    r.label, r
-  ]));
-
-  const quickKeys = ['Benchmark', 'Category', 'Expense Ratio', 'Inception'];
-  const longKeys = ['Investment Objective', 'Strategy & Approach', 'Risk Considerations', 'Notes'];
-
-  const quickFacts = quickKeys.map(k => byKey[k]).filter(Boolean);
-  const longItems = longKeys.map(k => byKey[k]).filter(Boolean);
   const hasAny = rows.some(r => !r.isPlaceholder);
 
-  if (!hasAny) {
+  const [richData, setRichData] = useState(null);
+  const [richLoading, setRichLoading] = useState(false);
+  const [richFailed, setRichFailed] = useState(false);
+
+  useEffect(() => {
+    if (hasAny || !ticker) return;
+    setRichLoading(true);
+    setRichData(null);
+    setRichFailed(false);
+    fetchStockInfo(ticker)
+      .then(setRichData)
+      .catch(() => setRichFailed(true))
+      .finally(() => setRichLoading(false));
+  }, [ticker, hasAny]);
+
+  // Static data path (pre-defined mutual funds)
+  if (hasAny) {
+    const byKey = Object.fromEntries(rows.map(r => [r.label, r]));
+    const quickKeys = ['Benchmark', 'Category', 'Expense Ratio', 'Inception'];
+    const longKeys = ['Investment Objective', 'Strategy & Approach', 'Risk Considerations', 'Notes'];
+    const quickFacts = quickKeys.map(k => byKey[k]).filter(Boolean);
+    const longItems = longKeys.map(k => byKey[k]).filter(Boolean);
+
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', gap: 10, textAlign: 'center' }}>
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.border} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.textMute }}>No fund data for {ticker}</div>
-        <div style={{ fontSize: 11, color: T.textFaint, maxWidth: 340, lineHeight: 1.6 }}>
-          Add an entry for <code style={{ fontSize: 10, background: T.inputBg, padding: '1px 5px', borderRadius: 3 }}>{ticker}</code> in{' '}
-          <code style={{ fontSize: 10, background: T.inputBg, padding: '1px 5px', borderRadius: 3 }}>src/data/fundInformation.js</code> to populate this tab.
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
+        {quickFacts.some(f => !f.isPlaceholder) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, width: 220 }}>
+            {quickFacts.map(({ label, value, isPlaceholder }) => (
+              <div key={label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '7px 14px' }}>
+                <div style={{ fontSize: 9, color: T.textMute, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: isPlaceholder ? T.textFaint : T.text, fontStyle: isPlaceholder ? 'italic' : 'normal' }}>
+                  {isPlaceholder ? '—' : value}
+                </div>
+              </div>
+            ))}
+            <div style={{ fontSize: 9, color: T.textFaint, lineHeight: 1.5, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 4 }}>
+              Data is editorial and for reference only. Verify material facts independently before investing.
+            </div>
+          </div>
+        )}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+          {longItems.filter(f => !f.isPlaceholder).map(({ label, value }) => (
+            <div key={label} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+              <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>{label}</div>
+              <div style={{ fontSize: 13, color: T.text, lineHeight: 1.65 }}>{value}</div>
+            </div>
+          ))}
         </div>
       </div>
     );
   }
 
-  return (
-    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
-      {/* Left column: quick facts */}
-      {quickFacts.some(f => !f.isPlaceholder) && (
+  // Loading state while fetching rich data
+  if (richLoading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', gap: 8, color: T.textFaint, fontSize: 13 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        Loading information for {ticker}…
+      </div>
+    );
+  }
+
+  // Rich data from backend (Yahoo Finance quoteSummary)
+  if (richData) {
+    const fmtVol = (v) => {
+      if (v == null) return null;
+      if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(2)}B`;
+      if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
+      if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`;
+      return String(v);
+    };
+    const fmtNum = (v, d = 2) => v != null ? Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) : null;
+
+    const hi = richData.fiftyTwoWeekHigh ?? quote?.fiftyTwoWeekHigh;
+    const lo = richData.fiftyTwoWeekLow  ?? quote?.fiftyTwoWeekLow;
+    const fiftyTwoWeekRange = hi != null && lo != null ? `$${fmtNum(lo)} – $${fmtNum(hi)}` : null;
+
+    const typeLabel = {
+      EQUITY: 'Stock · Equity', ETF: 'Exchange-Traded Fund',
+      MUTUALFUND: 'Mutual Fund', INDEX: 'Market Index',
+      CURRENCY: 'Currency / Forex', CRYPTOCURRENCY: 'Cryptocurrency',
+    }[quote?.instrumentType] || quote?.instrumentType || null;
+
+    const quickFacts = [
+      typeLabel                   && { label: 'Type',          value: typeLabel },
+      richData.sector             && { label: 'Sector',        value: richData.sector },
+      richData.industry           && { label: 'Industry',      value: richData.industry },
+      richData.country            && { label: 'Country',       value: richData.country },
+      quote?.fullExchangeName     && { label: 'Exchange',      value: quote.fullExchangeName },
+      richData.marketCap != null  && { label: 'Market Cap',    value: `$${fmtVol(richData.marketCap)}` },
+      richData.beta != null       && { label: 'Beta',          value: Number(richData.beta).toFixed(2) },
+      fiftyTwoWeekRange           && { label: '52-Week Range', value: fiftyTwoWeekRange },
+    ].filter(Boolean);
+
+    // Build compact Financial Highlights text from remaining metrics
+    const finHighlightParts = [
+      richData.trailingPE != null && `Trailing P/E: ${Number(richData.trailingPE).toFixed(2)}`,
+      richData.forwardPE  != null && `Forward P/E: ${Number(richData.forwardPE).toFixed(2)}`,
+      richData.priceToBook != null && `Price/Book: ${Number(richData.priceToBook).toFixed(2)}`,
+      richData.dividendYield != null  && `Dividend Yield: ${richData.dividendYield}`,
+      richData.returnOnEquity != null && `Return on Equity: ${richData.returnOnEquity}`,
+      richData.earningsGrowth != null && `Earnings Growth: ${richData.earningsGrowth}`,
+      richData.revenueGrowth  != null && `Revenue Growth: ${richData.revenueGrowth}`,
+      richData.avgVolume != null  && `Avg Volume: ${richData.avgVolume}`,
+      quote?.currency             && `Currency: ${quote.currency}`,
+    ].filter(Boolean);
+    const finHighlightsText = finHighlightParts.join(' · ');
+
+    // ── Build named sections from raw description ────────────────────────────
+    const desc = richData.description || '';
+    // Replace periods in known abbreviations so they don't split sentences
+    const normalized = desc.replace(/\b(Inc|Corp|Ltd|Co|U\.S|U\.K|Mr|Mrs|Dr|vs|etc|No|approx)\./g, '$1\u2024');
+    const rawSentences = normalized.split(/\.\s+(?=[A-Z])/).map(s => s.replace(/\u2024/g, '.').trim()).filter(Boolean);
+    // Ensure each sentence ends with a period
+    const sentences = rawSentences.map(s => /[.!?]$/.test(s) ? s : s + '.');
+
+    // First sentence → Investment Objective
+    const objective = sentences[0]?.trim() || '';
+
+    // Middle sentences → Business Overview (cap at ~500 chars)
+    const historyRe = /incorporat|founded|headquarter/i;
+    const lastSentence = sentences[sentences.length - 1] || '';
+    const hasHistory = historyRe.test(lastSentence) && sentences.length > 2;
+    const middleSentences = hasHistory ? sentences.slice(1, -1) : sentences.slice(1);
+    let overviewFull = middleSentences.join(' ').trim();
+    const OVERVIEW_LIMIT = 520;
+    const overview = overviewFull.length > OVERVIEW_LIMIT
+      ? overviewFull.slice(0, overviewFull.lastIndexOf(' ', OVERVIEW_LIMIT)) + '…'
+      : overviewFull;
+
+    // Last sentence (if founding/location) → partial company history
+    const history = hasHistory ? lastSentence.trim() : '';
+
+    // Auto-generate risk considerations from beta + sector
+    const beta = richData.beta != null ? Number(richData.beta) : null;
+    const riskParts = [];
+    if (beta != null) {
+      if (beta > 1.5)      riskParts.push(`High market sensitivity (beta ${beta.toFixed(2)}) — moves roughly ${beta.toFixed(1)}× the market, amplifying both gains and losses.`);
+      else if (beta > 1.1) riskParts.push(`Above-average market sensitivity (beta ${beta.toFixed(2)}) — slightly more volatile than the broader market.`);
+      else if (beta > 0.8) riskParts.push(`Market-level volatility (beta ${beta.toFixed(2)}) — tends to track the broader market closely.`);
+      else if (beta > 0)   riskParts.push(`Defensive profile (beta ${beta.toFixed(2)}) — historically less volatile than the broader market.`);
+    }
+    const SECTOR_RISK = {
+      'Technology': 'Technology stocks are subject to rapid innovation cycles, regulatory scrutiny, and valuation compression in rising-rate environments.',
+      'Healthcare': 'Healthcare companies face regulatory approval risk, pricing pressure, and patent expiration.',
+      'Financial Services': 'Financial stocks are sensitive to interest rate changes, credit cycles, and capital regulation.',
+      'Consumer Cyclical': 'Consumer discretionary names are exposed to economic cycles and shifts in consumer spending.',
+      'Energy': 'Energy companies are exposed to commodity price volatility and long-term energy-transition risk.',
+      'Real Estate': 'Real estate holdings are sensitive to interest rates, occupancy trends, and local market dynamics.',
+      'Utilities': 'Utilities offer stable cash flows but are sensitive to rate hikes and regulatory decisions.',
+      'Communication Services': 'Communication companies face subscription churn, rising content costs, and platform competition.',
+      'Industrials': 'Industrial names are exposed to economic cycles, supply-chain disruptions, and input-cost inflation.',
+      'Basic Materials': 'Materials companies are highly sensitive to commodity prices, global demand, and currency moves.',
+      'Consumer Defensive': 'Defensive consumer names offer relative stability but may lag significantly in strong bull markets.',
+    };
+    if (richData.sector && SECTOR_RISK[richData.sector]) riskParts.push(SECTOR_RISK[richData.sector]);
+    if (!richData.dividendYield) riskParts.push('This security does not currently pay a dividend, so total return depends entirely on price appreciation.');
+    const riskText = riskParts.join(' ');
+
+    // Notes: founding/HQ history + website
+    const noteParts = [];
+    if (history) noteParts.push(history);
+    if (richData.employees) noteParts.push(`The company employs approximately ${Number(richData.employees).toLocaleString()} people.`);
+    if (richData.website) noteParts.push(richData.website);
+    const notesText = noteParts.filter(Boolean).join(' ');
+
+    const longSections = [
+      objective  && { label: 'Investment Objective',  value: objective },
+      overview && overview !== objective && { label: 'Business Overview', value: overview },
+      riskText   && { label: 'Risk Considerations',   value: riskText },
+      finHighlightsText && { label: 'Financial Highlights', value: finHighlightsText },
+      notesText  && { label: 'Notes',                 value: notesText, hasLink: richData.website && notesText.includes(richData.website) },
+    ].filter(Boolean);
+
+    return (
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, width: 220 }}>
-          {quickFacts.map(({ label, value, isPlaceholder }) => (
-            <div key={label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '7px 14px' }}>
-              <div style={{ fontSize: 9, color: T.textMute, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: isPlaceholder ? T.textFaint : T.text, fontStyle: isPlaceholder ? 'italic' : 'normal' }}>
-                {isPlaceholder ? '—' : value}
+          {quickFacts.map(({ label, value }) => (
+            <QuickFactCard key={label} label={label} value={value} T={T} />
+          ))}
+          <div style={{ fontSize: 9, color: T.textFaint, lineHeight: 1.5, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 4 }}>
+            Data sourced from Yahoo Finance. Verify independently before investing.
+          </div>
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
+          {longSections.map(({ label, value, hasLink }) => (
+            <div key={label} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12, paddingBottom: 12 }}>
+              <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>{label}</div>
+              <div style={{ fontSize: 13, color: T.text, lineHeight: 1.65 }}>
+                {hasLink
+                  ? value.split(richData.website).flatMap((part, i, arr) =>
+                      i < arr.length - 1
+                        ? [part, <a key={i} href={richData.website} target="_blank" rel="noopener noreferrer" style={{ color: T.accent }}>{richData.website}</a>]
+                        : [part]
+                    )
+                  : value}
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback: show basic info from quote while rich data loads or if it failed
+  if (quote) {
+    const fmtNum = (v, d = 2) => v != null ? Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) : null;
+    const hi = quote.fiftyTwoWeekHigh, lo = quote.fiftyTwoWeekLow;
+    const typeLabel = { EQUITY: 'Stock · Equity', ETF: 'Exchange-Traded Fund', MUTUALFUND: 'Mutual Fund', INDEX: 'Market Index' }[quote.instrumentType] || quote.instrumentType || null;
+    const quickFacts = [
+      typeLabel && { label: 'Type', value: typeLabel },
+      quote.fullExchangeName && { label: 'Exchange', value: quote.fullExchangeName },
+      quote.currency && { label: 'Currency', value: quote.currency },
+      hi != null && lo != null && { label: '52-Week Range', value: `$${fmtNum(lo)} – $${fmtNum(hi)}` },
+    ].filter(Boolean);
+
+    return (
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, width: 220 }}>
+          {quickFacts.map(({ label, value }) => <QuickFactCard key={label} label={label} value={value} T={T} />)}
           <div style={{ fontSize: 9, color: T.textFaint, lineHeight: 1.5, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 4 }}>
-            Data is editorial and for reference only. Verify material facts independently before investing.
+            {richFailed ? 'Could not load full details from Yahoo Finance.' : 'Loading full details…'}
           </div>
         </div>
-      )}
-
-      {/* Right column: long-form sections */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-        {longItems.filter(f => !f.isPlaceholder).map(({ label, value }) => (
-          <div key={label} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
-            <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>{label}</div>
-            <div style={{ fontSize: 13, color: T.text, lineHeight: 1.65 }}>{value}</div>
-          </div>
-        ))}
+        <div style={{ flex: 1, minWidth: 0, paddingTop: 4 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{quote.longName || quote.shortName || ticker}</div>
+        </div>
       </div>
+    );
+  }
+
+  // Nothing available yet
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', gap: 10, textAlign: 'center' }}>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.border} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <div style={{ fontSize: 13, fontWeight: 600, color: T.textMute }}>Loading data for {ticker}…</div>
     </div>
   );
 }
@@ -1140,7 +1338,7 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
             calcHistory={calcHistory}
           />
         )}
-        {activeTab === 'Information' && <FundInformationTab ticker={ticker} />}
+        {activeTab === 'Information' && <FundInformationTab ticker={ticker} quote={quote} />}
         {activeTab === 'Quant Analysis' && <QuantAnalysisTab ticker={ticker} />}
         {activeTab === 'My Notes' && <MyNotesTab ticker={ticker} />}
       </div>
