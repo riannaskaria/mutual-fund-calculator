@@ -59,6 +59,21 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
   const searchTimeoutRef = useRef(null);
   const queryRef = useRef('');
   const mountedRef = useRef(true);
+  const [visible, setVisible] = useState(!collapsed);
+  const prevCollapsed = useRef(collapsed);
+
+  useEffect(() => {
+    if (collapsed === prevCollapsed.current) return;
+    prevCollapsed.current = collapsed;
+    if (!collapsed) {
+      // expanding: show full content right away so it fades in during width transition
+      setVisible(true);
+    } else {
+      // collapsing: fade out content first, then swap
+      const t = setTimeout(() => setVisible(false), 180);
+      return () => clearTimeout(t);
+    }
+  }, [collapsed]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -124,16 +139,31 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
     searchTimeoutRef.current = setTimeout(() => fetchNews(val.trim()), 500);
   }, []);
 
-  if (collapsed) {
-    return (
+  const EXPANDED_W = 288;
+  const COLLAPSED_W = 28;
+
+  return (
+    <div style={{
+      width: collapsed ? COLLAPSED_W : EXPANDED_W,
+      transition: 'width 0.38s cubic-bezier(0.4, 0, 0.2, 1)',
+      flexShrink: 0,
+      overflow: 'hidden',
+      borderRadius: 14,
+      position: 'relative',
+    }}>
+
+      {/* Collapsed strip — fades in when collapsing */}
       <div
         onClick={onToggle}
         title="Show news"
         style={{
-          width: 28, background: 'rgba(99,130,210,0.18)', border: '1px solid rgba(99,130,210,0.35)', borderRadius: 14,
+          position: 'absolute', inset: 0,
+          background: 'rgba(99,130,210,0.18)', border: '1px solid rgba(99,130,210,0.35)', borderRadius: 14,
           display: 'flex', flexDirection: 'column', alignItems: 'center',
-          paddingTop: 14, gap: 10, flexShrink: 0, cursor: 'pointer',
-          transition: 'background 0.15s', overflow: 'hidden',
+          paddingTop: 14, gap: 10, cursor: 'pointer',
+          opacity: collapsed ? 1 : 0,
+          pointerEvents: collapsed ? 'auto' : 'none',
+          transition: 'opacity 0.22s ease, background 0.15s',
         }}
         onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,130,210,0.3)'}
         onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,130,210,0.18)'}
@@ -145,11 +175,16 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
           News{articles.length > 0 ? ` · ${articles.length}` : ''}
         </span>
       </div>
-    );
-  }
 
-  return (
-    <div style={{ width: 288, background: T.newsItemBg, border: `1px solid ${T.border}`, borderRadius: 14, display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
+      {/* Full panel — fades out when collapsing */}
+      <div style={{
+        width: EXPANDED_W,
+        background: T.newsItemBg, border: `1px solid ${T.border}`, borderRadius: 14,
+        display: 'flex', flexDirection: 'column', height: '100%',
+        opacity: visible ? 1 : 0,
+        pointerEvents: collapsed ? 'none' : 'auto',
+        transition: 'opacity 0.18s ease',
+      }}>
       {/* Header */}
       <div style={{ padding: '11px 14px 10px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -240,6 +275,7 @@ export default function NewsPanel({ onArticlesUpdate, collapsed = false, onToggl
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
     </div>
   );
 }

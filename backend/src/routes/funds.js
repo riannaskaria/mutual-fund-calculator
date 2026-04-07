@@ -7,6 +7,10 @@
 const express = require('express');
 const router = express.Router();
 const { getAllFunds, validateTicker, calculate, BENCHMARK_TICKER } = require('../services/mutualFundService');
+const { fetchStockInfo } = require('../services/stockInfoService');
+
+const stockInfoCache = new Map(); // ticker → { data, expiresAt }
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // GET /api/funds
 router.get('/funds', (req, res) => {
@@ -105,6 +109,61 @@ router.get('/compare', async (req, res) => {
     });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// GET /api/stock-info/:ticker — rich summary from Yahoo Finance quoteSummary
+router.get('/stock-info/:ticker', async (req, res) => {
+  const { ticker } = req.params;
+  if (!ticker || ticker.trim() === '')
+    return res.status(400).json({ error: 'ticker is required' });
+
+  try {
+    const key = ticker.trim().toUpperCase();
+    const cached = stockInfoCache.get(key);
+    if (cached && Date.now() < cached.expiresAt) return res.json(cached.data);
+
+    const data = await fetchStockInfo(key);
+
+    const profile = data.assetProfile || {};
+    const detail  = data.summaryDetail || {};
+    const stats   = data.defaultKeyStatistics || {};
+    const fin     = data.financialData || {};
+
+    const fmt = o => (o?.fmt != null ? o.fmt : o?.raw != null ? o.raw : null);
+
+    const payload = {
+      ticker: key,
+      // company identity
+      sector:    profile.sector    || null,
+      industry:  profile.industry  || null,
+      country:   profile.country   || null,
+      website:   profile.website   || null,
+      employees: profile.fullTimeEmployees || null,
+      description: profile.longBusinessSummary || null,
+      // valuation
+      marketCap:    fmt(detail.marketCap),
+      beta:         fmt(detail.beta) ?? fmt(stats.beta),
+      trailingPE:   fmt(detail.trailingPE),
+      forwardPE:    fmt(detail.forwardPE),
+      priceToBook:  fmt(stats.priceToBook),
+      bookValue:    fmt(stats.bookValue),
+      // income / returns
+      dividendYield:     fmt(detail.dividendYield) ?? fmt(detail.trailingAnnualDividendYield),
+      earningsGrowth:    fmt(fin.earningsGrowth),
+      revenueGrowth:     fmt(fin.revenueGrowth),
+      returnOnEquity:    fmt(fin.returnOnEquity),
+      returnOnAssets:    fmt(fin.returnOnAssets),
+      // price context
+      fiftyTwoWeekHigh: fmt(detail.fiftyTwoWeekHigh),
+      fiftyTwoWeekLow:  fmt(detail.fiftyTwoWeekLow),
+      fiftyDayAverage:  fmt(detail.fiftyDayAverage),
+      avgVolume:        fmt(detail.averageVolume),
+    };
+    stockInfoCache.set(key, { data: payload, expiresAt: Date.now() + CACHE_TTL_MS });
+    res.json(payload);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
   }
 });
 

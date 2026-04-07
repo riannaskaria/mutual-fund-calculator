@@ -83,6 +83,17 @@ function buildSystemPrompt(context) {
       lines.push(`Worst performer today: \`${worst.ticker || worst.id}\` (${fmtPct(worst)})`);
     }
   }
+  if (Array.isArray(context?.articles) && context.articles.length > 0) {
+    const recent = [...context.articles]
+      .sort((a, b) => (b.time || 0) - (a.time || 0))
+      .slice(0, 10);
+    const rows = recent.map((a, i) => {
+      const age = a.time ? Math.floor((Date.now() - a.time) / 60000) : null;
+      const when = age != null ? (age < 60 ? `${age}m ago` : `${Math.floor(age / 60)}h ago`) : '';
+      return `  ${i + 1}. [${a.tag || 'Market'}] ${a.title} — ${a.source || ''}${when ? ` (${when})` : ''}`;
+    });
+    lines.push(`\n## Latest News Headlines (from dashboard news feed)\n${rows.join('\n')}\nUse search_news to find more articles on a specific topic.`);
+  }
   return lines.join('\n');
 }
 
@@ -231,10 +242,22 @@ async function executeTool(name, args, context) {
   if (name === 'search_news') {
     const { query } = args;
     const articles = context?.articles || [];
+    const GENERIC = /^(latest|recent|all|news|today|market|top|headlines?|stories?|updates?)[\s,]*$/i;
+    const isGeneric = GENERIC.test(query.trim()) || query.trim().length <= 3;
+
+    if (isGeneric) {
+      const recent = [...articles]
+        .sort((a, b) => (b.time || 0) - (a.time || 0))
+        .slice(0, 10)
+        .map(a => ({ title: a.title, source: a.source, tag: a.tag, time: new Date(a.time).toLocaleDateString() }));
+      if (recent.length === 0) return { message: 'No news articles are currently loaded in the dashboard.' };
+      return { count: recent.length, note: 'Showing most recent articles', articles: recent };
+    }
+
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     const scored = articles
       .map(a => {
-        const hay = (a.title + ' ' + (a.source || '')).toLowerCase();
+        const hay = (a.title + ' ' + (a.source || '') + ' ' + (a.tag || '')).toLowerCase();
         const hits = words.filter(w => hay.includes(w)).length;
         return { a, hits };
       })
@@ -247,7 +270,16 @@ async function executeTool(name, args, context) {
         tag: a.tag,
         time: new Date(a.time).toLocaleDateString(),
       }));
-    if (scored.length === 0) return { message: 'No recent articles found for: ' + query };
+
+    if (scored.length === 0) {
+      // fallback: return the most recent articles so the bot still has something to work with
+      const recent = [...articles]
+        .sort((a, b) => (b.time || 0) - (a.time || 0))
+        .slice(0, 5)
+        .map(a => ({ title: a.title, source: a.source, tag: a.tag, time: new Date(a.time).toLocaleDateString() }));
+      if (recent.length === 0) return { message: 'No news articles are currently loaded in the dashboard.' };
+      return { count: recent.length, note: `No articles matched "${query}" — showing most recent instead`, articles: recent };
+    }
     return { count: scored.length, articles: scored };
   }
 
