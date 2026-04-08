@@ -212,12 +212,12 @@ export default function TradingDashboard() {
                     direction: alert.direction,
                     currentPrice: fund?.price ?? null,
                   }),
-                }).catch(() => {});
+                }).catch(() => { });
               });
             }
-          } catch {}
+          } catch { }
         }
-      } catch {}
+      } catch { }
     });
   }, []);
 
@@ -310,7 +310,7 @@ export default function TradingDashboard() {
         const acc = JSON.parse(localStorage.getItem('mf_account_v1') || '{}');
         acc.favorites = [...next];
         localStorage.setItem('mf_account_v1', JSON.stringify(acc));
-      } catch {}
+      } catch { }
       return next;
     });
   }, []);
@@ -319,7 +319,7 @@ export default function TradingDashboard() {
     const a = { id: Date.now(), ticker, targetPrice: parseFloat(targetPrice), direction, triggered: false };
     setAlerts(prev => {
       const next = [...prev, a];
-      try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch { }
       return next;
     });
   }, []);
@@ -327,7 +327,7 @@ export default function TradingDashboard() {
   const resetAlert = useCallback((id) => {
     setAlerts(prev => {
       const next = prev.map(a => a.id === id ? { ...a, triggered: false } : a);
-      try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch { }
       return next;
     });
   }, []);
@@ -335,7 +335,7 @@ export default function TradingDashboard() {
   const removeAlert = useCallback((id) => {
     setAlerts(prev => {
       const next = prev.filter(a => a.id !== id);
-      try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem('mf_alerts_v1', JSON.stringify(next)); } catch { }
       return next;
     });
   }, []);
@@ -440,6 +440,7 @@ export default function TradingDashboard() {
             }}
           />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, border: `1px solid ${T.border}` }}>
+            <TrendingPanel />
             <FundHeader
               ticker={ticker}
               fundName={selectedFund ? getFundBaseName(selectedFund) : ''}
@@ -449,7 +450,6 @@ export default function TradingDashboard() {
               onAddAlert={addAlert}
               onRemoveAlert={removeAlert}
             />
-            <TrendingPanel />
             <ChartPanel
               ticker={ticker}
               quote={quote}
