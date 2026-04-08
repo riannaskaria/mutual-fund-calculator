@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-04-07T19:29:05.076Z",
+  "updatedAt": "2026-04-08T21:57:39.907Z",
   "searches": {
     "VFIAX": {
       "ticker": "VFIAX",
@@ -18,6 +18,30 @@
       "name": "WAL",
       "count": 1,
       "lastSearchedAt": "2026-04-07T19:29:05.071Z"
+    },
+    "FX": {
+      "ticker": "FX",
+      "name": "FX",
+      "count": 1,
+      "lastSearchedAt": "2026-04-08T21:57:37.581Z"
+    },
+    "FXI": {
+      "ticker": "FXI",
+      "name": "FXI",
+      "count": 2,
+      "lastSearchedAt": "2026-04-08T21:57:39.899Z"
+    },
+    "FXIA": {
+      "ticker": "FXIA",
+      "name": "FXIA",
+      "count": 1,
+      "lastSearchedAt": "2026-04-08T21:57:38.326Z"
+    },
+    "FXIAX": {
+      "ticker": "FXIAX",
+      "name": "FXIAX",
+      "count": 1,
+      "lastSearchedAt": "2026-04-08T21:57:38.579Z"
     }
   },
   "trades": {
