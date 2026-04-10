@@ -49,14 +49,42 @@ async function fetchQuote(ticker) {
 
 // ─── AI generation ────────────────────────────────────────────────────────────
 
-async function generateBrief({ funds, articles, name }) {
+function getGreetingTimePart(timeZone) {
+  try {
+    const d = new Date();
+    const options = { hour: 'numeric', hour12: false };
+    if (timeZone) options.timeZone = timeZone;
+    const hour = parseInt(Intl.DateTimeFormat('en-US', options).format(d), 10);
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    return 'evening';
+  } catch (e) {
+    return 'portfolio'; // fallback
+  }
+}
+
+async function generateBrief({ funds, articles, name, timeZone }) {
   const model = getClient().getGenerativeModel({
-    model: process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite',
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    tools: [{ googleSearch: {} }],
+    systemInstruction: 'You are a Goldman Sachs senior portfolio manager. Be confident, direct, and leverage your live search capabilities to deeply understand market moves. No filler, no robotic phrasing.',
+    generationConfig: {
+      temperature: 0.2, // lower temp for more deterministic, focused, and faster insights
+    }
   });
 
-  const dateStr = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-  });
+  let dateStr;
+  try {
+    const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+    if (timeZone) options.timeZone = timeZone;
+    dateStr = new Date().toLocaleDateString('en-US', options);
+  } catch (e) {
+    dateStr = new Date().toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+    });
+  }
+
+  const timePart = getGreetingTimePart(timeZone);
 
   const fundsText = funds.map(f => {
     const pct    = f.changePct != null ? `${f.changePct >= 0 ? '+' : ''}${f.changePct.toFixed(2)}%` : 'N/A';
@@ -77,7 +105,7 @@ async function generateBrief({ funds, articles, name }) {
     ? articles.slice(0, 10).map((a, i) => `${i + 1}. [${a.tag || 'Market'}] ${a.title} — ${a.source || ''}`).join('\n')
     : 'No recent news provided.';
 
-  const prompt = `You are a Goldman Sachs senior portfolio manager writing a personalized morning briefing for ${name ? `a client named ${name}` : 'a client'} on ${dateStr}.
+  const prompt = `Write a personalized ${timePart === 'portfolio' ? 'portfolio' : timePart} briefing for ${name ? `a client named ${name}` : 'a client'} on ${dateStr}. Use your search tool to pinpoint exactly why the standout movers shifted today.
 
 PORTFOLIO HOLDINGS (live data):
 ${fundsText}
@@ -106,7 +134,12 @@ RULES:
 
 async function generateAlertContext({ ticker, direction, targetPrice, currentPrice, name52wHigh, name52wLow }) {
   const model = getClient().getGenerativeModel({
-    model: process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite',
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    tools: [{ googleSearch: {} }],
+    systemInstruction: 'You are a Goldman Sachs senior advisor. Provide exactly 1-2 sentence insights on market movements using live search data.',
+    generationConfig: {
+      temperature: 0.2,
+    }
   });
 
   const isAbove   = direction === 'above';
@@ -135,11 +168,21 @@ function backendUrl() {
   return (process.env.BACKEND_URL || 'http://localhost:8080').replace(/\/$/, '');
 }
 
-function sharedLayout({ innerHtml, unsubscribeUrl }) {
-  const now = new Date().toLocaleString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
-  });
+function sharedLayout({ innerHtml, unsubscribeUrl, timeZone }) {
+  let now;
+  try {
+    const options = {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+    };
+    if (timeZone) options.timeZone = timeZone;
+    now = new Date().toLocaleString('en-US', options);
+  } catch (e) {
+    now = new Date().toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+    });
+  }
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -181,11 +224,20 @@ function sharedLayout({ innerHtml, unsubscribeUrl }) {
 </html>`;
 }
 
-function digestEmailHtml({ brief, funds, name, to }) {
+function digestEmailHtml({ brief, funds, name, to, timeZone }) {
   const unsubUrl = `${backendUrl()}/api/email/unsubscribe?email=${encodeURIComponent(to)}`;
-  const dateStr  = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-  });
+  let dateStr;
+  try {
+    const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+    if (timeZone) options.timeZone = timeZone;
+    dateStr = new Date().toLocaleDateString('en-US', options);
+  } catch (e) {
+    dateStr = new Date().toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+    });
+  }
+
+  const timePart = getGreetingTimePart(timeZone);
 
   // Brief → HTML paragraphs, bolding **text**
   const briefHtml = brief
@@ -222,7 +274,7 @@ function digestEmailHtml({ brief, funds, name, to }) {
       <tr><td style="background:#0d1f38;padding:36px 28px 30px;">
         <div style="display:inline-block;background:rgba(115,153,198,0.18);border:1px solid rgba(115,153,198,0.35);border-radius:20px;padding:4px 13px;font-size:10px;font-weight:700;color:#7399C6;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:14px;">AI Portfolio Brief</div>
         <h1 style="margin:0 0 6px;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;line-height:1.2;">
-          ${name ? `Good morning, ${name.split(' ')[0]}` : 'Your morning briefing'}
+          ${name ? `Good ${timePart}, ${name.split(' ')[0]}` : `Your ${timePart} briefing`}
         </h1>
         <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.45);">${dateStr}</p>
       </td></tr>
@@ -254,7 +306,7 @@ function digestEmailHtml({ brief, funds, name, to }) {
     </table>
   `;
 
-  return sharedLayout({ innerHtml: inner, unsubscribeUrl: unsubUrl });
+  return sharedLayout({ innerHtml: inner, unsubscribeUrl: unsubUrl, timeZone });
 }
 
 // ─── routes ───────────────────────────────────────────────────────────────────
@@ -264,7 +316,7 @@ router.post('/brief', async (req, res) => {
   if (!process.env.GEMINI_API_KEY) {
     return res.status(503).json({ error: 'GEMINI_API_KEY not configured' });
   }
-  const { favorites, articles, name } = req.body;
+  const { favorites, articles, name, timeZone } = req.body;
   if (!Array.isArray(favorites) || favorites.length === 0) {
     return res.status(400).json({ error: 'favorites array is required' });
   }
@@ -274,7 +326,7 @@ router.post('/brief', async (req, res) => {
     if (funds.length === 0) {
       return res.status(422).json({ error: 'Could not fetch quotes for any of the provided tickers' });
     }
-    const brief = await generateBrief({ funds, articles: articles || [], name });
+    const brief = await generateBrief({ funds, articles: articles || [], name, timeZone });
     res.json({ brief, funds, generatedAt: new Date().toISOString() });
   } catch (e) {
     console.error('[digest/brief]', e.message);
@@ -291,7 +343,7 @@ router.post('/email', async (req, res) => {
     return res.status(503).json({ error: 'Email not configured. Add BREVO_API_KEY to backend/.env', unconfigured: true });
   }
 
-  const { to, name, favorites, articles } = req.body;
+  const { to, name, favorites, articles, timeZone } = req.body;
   if (!to)                                     return res.status(400).json({ error: 'to is required' });
   if (!Array.isArray(favorites) || favorites.length === 0) {
     return res.status(400).json({ error: 'favorites array is required' });
@@ -299,10 +351,17 @@ router.post('/email', async (req, res) => {
 
   try {
     const funds = (await Promise.all(favorites.slice(0, 10).map(fetchQuote))).filter(Boolean);
-    const brief = await generateBrief({ funds, articles: articles || [], name });
+    const brief = await generateBrief({ funds, articles: articles || [], name, timeZone });
 
     const from     = process.env.BREVO_SENDER_EMAIL || 'joaol.olivsilva@gmail.com';
-    const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    let dateLabel;
+    try {
+      const options = { weekday: 'long', month: 'short', day: 'numeric' };
+      if (timeZone) options.timeZone = timeZone;
+      dateLabel = new Date().toLocaleDateString('en-US', options);
+    } catch (e) {
+      dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    }
 
     const emailResp = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -315,7 +374,7 @@ router.post('/email', async (req, res) => {
         sender:      { name: 'GS Fund Dashboard', email: from },
         to:          [{ email: to, name: name || undefined }],
         subject:     `Your Portfolio Brief — ${dateLabel}`,
-        htmlContent: digestEmailHtml({ brief, funds, name, to }),
+        htmlContent: digestEmailHtml({ brief, funds, name, to, timeZone }),
         textContent: brief,
       }),
     });

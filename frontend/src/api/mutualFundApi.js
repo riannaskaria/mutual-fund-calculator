@@ -222,7 +222,7 @@ export async function fetchStockInfo(ticker) {
 }
 
 /**
- * Generate an AI morning brief for a list of favorite tickers.
+ * Generate an AI portfolio brief for a list of favorite tickers.
  * Returns { brief: string, funds: [...], generatedAt: ISO }
  * @param {{ favorites: string[], articles?: object[], name?: string }} opts
  */
@@ -234,10 +234,11 @@ export async function fetchMorningBrief({ favorites, articles = [], name = '' } 
       generatedAt: new Date().toISOString(),
     };
   }
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const response = await fetch(`${baseURL}/digest/brief`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ favorites, articles, name }),
+    body: JSON.stringify({ favorites, articles, name, timeZone }),
     signal: AbortSignal.timeout(30000),
   });
   return handleResponse(response);
@@ -250,10 +251,11 @@ export async function fetchMorningBrief({ favorites, articles = [], name = '' } 
  */
 export async function sendDigestEmail({ to, name = '', favorites, articles = [] } = {}) {
   if (useMock) return { ok: true, brief: 'Mock mode.' };
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const response = await fetch(`${baseURL}/digest/email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to, name, favorites, articles }),
+    body: JSON.stringify({ to, name, favorites, articles, timeZone }),
     signal: AbortSignal.timeout(35000),
   });
   return handleResponse(response);
