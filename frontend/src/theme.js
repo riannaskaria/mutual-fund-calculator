@@ -13,9 +13,9 @@ export const GS_BRAND = {
   negative: '#C2170A',
 };
 
-/** GS Sans / GS Serif are loaded in index.css from cdn.gs.com (same as the corporate site). */
-export const FONT_UI = "'GS Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif";
-export const FONT_DISPLAY = "'GS Serif', Georgia, 'Times New Roman', serif";
+/** System font stack — renders SF Pro on Apple, Segoe UI on Windows, Roboto on Android */
+export const FONT_UI = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
+export const FONT_DISPLAY = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
 
 export const THEMES = {
   dark: {

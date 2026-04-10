@@ -64,12 +64,12 @@ export default function FundHeader({ ticker, fundName, quote, quoteLoading, aler
                 {quote?.longName || fundName || quote?.symbol || ticker}
               </span>
               {quote?.fullExchangeName && (
-                <span style={{ fontSize: 10, color: T.accentSoft, background: T.cardBg, border: `1px solid ${T.borderSub}`, borderRadius: 20, padding: '2px 8px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 10, color: T.accentSoft, background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 20, padding: '2px 8px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                   {quote.fullExchangeName}
                 </span>
               )}
               {quote?.instrumentType && (
-                <span style={{ fontSize: 10, color: T.accentSoft, background: T.cardBg, border: `1px solid ${T.borderSub}`, borderRadius: 20, padding: '2px 8px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 10, color: T.accentSoft, background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 20, padding: '2px 8px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                   {quote.instrumentType}
                 </span>
               )}
@@ -206,8 +206,9 @@ export default function FundHeader({ ticker, fundName, quote, quoteLoading, aler
                         {tickerAlerts.map(a => (
                           <div key={a.id} style={{
                             display: 'flex', alignItems: 'center', gap: 8,
-                            background: T.cardBg, borderRadius: 12,
-                            padding: '8px 12px', border: `1px solid ${T.border}`,
+                            background: T.solidPanel, borderRadius: 12,
+                            padding: '8px 12px', border: `1px solid ${T.borderSub}`,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                           }}>
                             <span style={{ fontSize: 14, color: T.accent }}>{a.direction === 'above' ? '↑' : '↓'}</span>
                             <span style={{ fontSize: 12, fontWeight: 600, color: T.text, flex: 1 }}>${a.targetPrice.toFixed(2)}</span>
@@ -228,8 +229,8 @@ export default function FundHeader({ ticker, fundName, quote, quoteLoading, aler
                         {triggeredAlerts.map(a => (
                           <div key={a.id} style={{
                             display: 'flex', alignItems: 'center', gap: 8,
-                            background: T.cardBg, borderRadius: 12, opacity: 0.6,
-                            padding: '8px 12px', border: `1px solid ${T.border}`,
+                            background: T.solidPanel, borderRadius: 12, opacity: 0.6,
+                            padding: '8px 12px', border: `1px solid ${T.borderSub}`,
                           }}>
                             <span style={{ fontSize: 13, color: T.positive }}>✓</span>
                             <span style={{ fontSize: 12, color: T.textMute, flex: 1 }}>{a.direction === 'above' ? '↑' : '↓'} ${a.targetPrice.toFixed(2)}</span>

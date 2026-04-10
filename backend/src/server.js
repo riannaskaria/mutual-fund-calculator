@@ -3,9 +3,10 @@ const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const axios   = require('axios');
-const fundsRouter = require('./routes/funds');
-const botRouter   = require('./routes/bot');
-const emailRouter = require('./routes/email');
+const fundsRouter   = require('./routes/funds');
+const botRouter     = require('./routes/bot');
+const emailRouter   = require('./routes/email');
+const digestRouter  = require('./routes/digest');
 const discoveryRouter = require('./routes/discovery');
 const trendingRouter = require('./routes/trending');
 const { initializeFundDiscoveryRefresh } = require('./services/fundDiscoveryService');
@@ -83,6 +84,7 @@ app.use('/google-news-rss', async (req, res) => {
 app.use('/api', fundsRouter);
 app.use('/api/bot', botRouter);
 app.use('/api/email', emailRouter);
+app.use('/api/digest', digestRouter);
 app.use('/api/discovery', discoveryRouter);
 app.use('/api/trending', trendingRouter);
 

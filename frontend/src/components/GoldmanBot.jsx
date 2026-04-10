@@ -88,7 +88,9 @@ function getSuggestions(selectedFund) {
 // ── component ──────────────────────────────────────────────────────────────────
 export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
   const T = useT();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]       = useState(false);
+  const [closing, setClosing] = useState(false);
+  const panelRef              = useRef(null);
   const [messages, setMessages] = useState(() => {
     try { return JSON.parse(localStorage.getItem(CHAT_KEY) || '[]'); }
     catch { return []; }
@@ -115,6 +117,24 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
   useEffect(() => {
     if (open) setUnread(0);
   }, [open]);
+
+  const closePanel = useCallback(() => {
+    setClosing(true);
+    setTimeout(() => { setOpen(false); setClosing(false); }, 210);
+  }, []);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open || closing) return;
+    const handler = (e) => {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target) &&
+        btnRef.current   && !btnRef.current.contains(e.target)
+      ) closePanel();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open, closing, closePanel]);
 
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
@@ -256,7 +276,7 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
       setCorner(next);
       localStorage.setItem('mf_bot_corner', JSON.stringify(next));
     } else {
-      setOpen(o => !o);
+      if (open) closePanel(); else setOpen(true);
     }
     dragState.current = null;
   }
@@ -307,13 +327,19 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
 
       {/* ── chat panel ── */}
       {open && (
-        <div style={{
-          position: 'fixed', ...panelStyle, zIndex: 999,
-          width: 390, maxHeight: 580,
-          background: T.solidPanel || T.panelBg, border: `1px solid ${T.border}`,
-          borderRadius: 14, boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        }}>
+        <div
+          ref={panelRef}
+          style={{
+            position: 'fixed', ...panelStyle, zIndex: 999,
+            width: 390, maxHeight: 580,
+            background: T.solidPanel || T.panelBg, border: `1px solid ${T.border}`,
+            borderRadius: 14, boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            animation: closing
+              ? 'botSlideOut 0.21s cubic-bezier(0.4,0,1,1) forwards'
+              : 'botSlideIn 0.22s cubic-bezier(0.16,1,0.3,1)',
+          }}
+        >
 
           {/* header */}
           <div style={{
@@ -322,17 +348,27 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
             background: `linear-gradient(135deg, ${T.brand} 0%, ${T.accent} 100%)`,
           }}>
             <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.15)',
+              width: 32, height: 32, borderRadius: 8,
+              background: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.18)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, color: '#fff', fontWeight: 800, letterSpacing: '-0.5px',
-            }}>GS</div>
+              flexShrink: 0,
+            }}>
+              {/* trend line + sparkle — financial AI */}
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3,17 8,11 13,14 21,5" stroke="rgba(255,255,255,0.85)" strokeWidth="2"/>
+                <circle cx="20" cy="4" r="2.2" fill="rgba(255,255,255,0.85)"/>
+                <line x1="17" y1="20" x2="17" y2="17" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8"/>
+                <line x1="12" y1="20" x2="12" y2="16" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8"/>
+                <line x1="7" y1="20" x2="7" y2="18" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8"/>
+              </svg>
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>GS Bot</div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {selectedFund
-                  ? `Discussing: ${selectedFund.ticker || selectedFund.id}`
-                  : 'Goldman Fund Assistant'}
+                  ? `Focused on ${selectedFund.ticker || selectedFund.id}`
+                  : 'Fund & Market Assistant'}
               </div>
             </div>
             {messages.length > 0 && (
@@ -503,6 +539,14 @@ export default function GoldmanBot({ funds, quote, articles, selectedFund }) {
         @keyframes botPulse {
           0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
           40%            { opacity: 1;    transform: scale(1);    }
+        }
+        @keyframes botSlideIn {
+          from { opacity: 0; transform: translateY(10px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)    scale(1);    }
+        }
+        @keyframes botSlideOut {
+          from { opacity: 1; transform: translateY(0)   scale(1);    }
+          to   { opacity: 0; transform: translateY(8px) scale(0.97); }
         }
       `}</style>
     </>

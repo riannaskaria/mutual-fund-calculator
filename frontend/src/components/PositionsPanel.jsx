@@ -304,7 +304,7 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
         <span style={{ fontSize: 10, color: T.textMute }}>Last / Chg</span>
       </div>
 
-      <div ref={scrollRef} onScroll={handleScroll} className="panel-scroll" style={{ overflowY: 'auto', flex: 1 }}>
+      <div ref={scrollRef} onScroll={handleScroll} className="panel-scroll" style={{ overflowY: 'auto', flex: 1, padding: '5px 7px' }}>
         {visible.length === 0 && (
           <div style={{ padding: '24px 14px', textAlign: 'center', fontSize: 11, color: T.textFaint }}>No funds found</div>
         )}
@@ -321,14 +321,18 @@ export default function PositionsPanel({ funds, selectedIdx, onSelect, lastRefre
             <div key={fund.id ?? ticker}
               style={{
                 display: 'flex', alignItems: 'stretch',
-                borderBottom: `1px solid ${T.border}`,
-                background: isSelected ? `${T.accent}14` : 'transparent',
-                transition: 'background 0.12s',
+                background: T.solidPanel,
+                border: `1px solid ${isSelected ? T.accent : T.border}`,
+                borderRadius: 9,
+                marginBottom: 4,
+                overflow: 'hidden',
+                transition: 'border-color 0.12s',
               }}
-              onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.hover; }}
-              onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+              onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = T.borderSub; }}
+              onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = T.border; }}
             >
-              <div style={{ width: 3, flexShrink: 0, background: isSelected ? T.accent : 'transparent', transition: 'background 0.12s' }} />
+              {/* selected accent bar */}
+              <div style={{ width: 3, flexShrink: 0, background: isSelected ? T.accent : 'transparent' }} />
               <div
                 onClick={() => onSelect(globalIdx)}
                 style={{ flex: 1, padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minWidth: 0, cursor: 'pointer' }}

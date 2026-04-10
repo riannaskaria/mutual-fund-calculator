@@ -18,20 +18,36 @@ function formatTimestamp(value) {
 }
 
 function Row({ rank, ticker, name, value, rightLabel, T }) {
+  const showName = name && name !== ticker;
   return (
     <div style={{
-      display: 'grid', gridTemplateColumns: '20px 1fr auto',
-      alignItems: 'center', gap: 8, padding: '7px 12px',
-      borderBottom: `1px solid ${T.border2}`,
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '7px 14px', borderBottom: `1px solid ${T.border2}`,
     }}>
-      <span style={{ color: T.textMute, fontSize: 10 }}>#{rank}</span>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{ticker}</div>
-        <div style={{ fontSize: 10, color: T.textSub, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+      <span style={{
+        fontSize: 11, color: T.textFaint, fontVariantNumeric: 'tabular-nums',
+        width: 14, textAlign: 'right', flexShrink: 0,
+      }}>{rank}</span>
+
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: T.text, letterSpacing: '-0.01em' }}>
+          {ticker}
+        </span>
+        {showName && (
+          <span style={{
+            fontSize: 10.5, color: T.textMute, fontWeight: 400,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{name}</span>
+        )}
       </div>
-      <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: T.accent }}>{value}</div>
-        <div style={{ fontSize: 9, color: T.textMute }}>{rightLabel}</div>
+
+      <div style={{
+        display: 'flex', alignItems: 'baseline', gap: 3, flexShrink: 0,
+        fontSize: 12, fontWeight: 600, color: T.accent,
+        fontVariantNumeric: 'tabular-nums',
+      }}>
+        {value}
+        <span style={{ fontSize: 10, color: T.textFaint, fontWeight: 400 }}>{rightLabel}</span>
       </div>
     </div>
   );
@@ -97,19 +113,19 @@ export default function TrendingPanel() {
 
   const triggerStyle = {
     display: 'flex', alignItems: 'center', gap: 6,
-    padding: '5px 10px', fontSize: 12, fontWeight: 600,
+    padding: '5px 10px', fontSize: 11, fontWeight: 600,
     border: `1px solid ${T.border}`, borderRadius: 6,
-    background: '#ffffff', color: T.text,
-    cursor: 'pointer',
+    background: T.solidPanel, color: T.text,
+    cursor: 'pointer', letterSpacing: '0.02em',
   };
 
   const dropdownStyle = {
     position: 'absolute', top: 'calc(100% + 6px)', left: 0,
     minWidth: 420, zIndex: 200,
-    background: '#ffffff',
+    background: T.solidPanel,
     border: `1px solid ${T.border}`,
-    borderRadius: 8,
-    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+    borderRadius: 10,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.22)',
     overflow: 'hidden',
   };
 
@@ -126,11 +142,11 @@ export default function TrendingPanel() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
             {/* Most Searched */}
             <div style={{ borderRight: `1px solid ${T.border}` }}>
-              <div style={{ padding: '8px 12px', borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Most Searched
+              <div style={{ padding: '7px 14px 5px', borderBottom: `1px solid ${T.border2}`, fontSize: 10, fontWeight: 500, color: T.textMute }}>
+                Most searched
               </div>
               {loading && <div style={{ padding: 12, fontSize: 11, color: T.textMute }}>Loading…</div>}
-              {!loading && searched.length === 0 && <div style={{ padding: 12, fontSize: 11, color: T.textMute }}>No search telemetry yet.</div>}
+              {!loading && searched.length === 0 && <div style={{ padding: 12, fontSize: 11, color: T.textMute }}>No data yet.</div>}
               {!loading && searched.map(item => (
                 <Row key={`s-${item.ticker}`} rank={item.rank} ticker={item.ticker} name={item.name} value={item.searchCount} rightLabel="searches" T={T} />
               ))}
@@ -138,11 +154,11 @@ export default function TrendingPanel() {
 
             {/* Most Traded */}
             <div>
-              <div style={{ padding: '8px 12px', borderBottom: `1px solid ${T.border}`, fontSize: 10, fontWeight: 700, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Most Traded
+              <div style={{ padding: '7px 14px 5px', borderBottom: `1px solid ${T.border2}`, fontSize: 10, fontWeight: 500, color: T.textMute }}>
+                Most traded
               </div>
               {loading && <div style={{ padding: 12, fontSize: 11, color: T.textMute }}>Loading…</div>}
-              {!loading && traded.length === 0 && <div style={{ padding: 12, fontSize: 11, color: T.textMute }}>No trade telemetry yet.</div>}
+              {!loading && traded.length === 0 && <div style={{ padding: 12, fontSize: 11, color: T.textMute }}>No data yet.</div>}
               {!loading && traded.map(item => (
                 <Row key={`t-${item.ticker}`} rank={item.rank} ticker={item.ticker} name={item.name} value={item.tradeCount} rightLabel="trades" T={T} />
               ))}
@@ -155,16 +171,12 @@ export default function TrendingPanel() {
             </div>
           )}
 
-          <div style={{ borderTop: `1px solid ${T.border}`, background: T.inputBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', fontSize: 10, color: T.textSub }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: T.textMute }}>Status:</span>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, display: 'inline-block' }} />
-              <span style={{ color: dotColor, fontWeight: 700 }}>{statusLabel}</span>
+          <div style={{ borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px', fontSize: 10, color: T.textMute }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotColor, display: 'inline-block' }} />
+              <span style={{ color: dotColor }}>{statusLabel}</span>
             </div>
-            <div>
-              <span style={{ color: T.textMute }}>Last update:</span>{' '}
-              <span style={{ color: T.text }}>{formatTimestamp(lastTelemetryAt)}</span>
-            </div>
+            <span>{formatTimestamp(lastTelemetryAt)}</span>
           </div>
         </div>
       )}

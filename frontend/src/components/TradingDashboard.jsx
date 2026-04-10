@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { THEMES, ThemeCtx, CAPM_SUPPORTED, getFundTicker, getFundBaseName, FONT_UI } from '../theme';
-import { fetchFutureValue, fetchYahooQuote } from '../api/mutualFundApi';
+import { fetchFutureValue, fetchYahooQuote, fetchMorningBrief, sendDigestEmail } from '../api/mutualFundApi';
 import API_BASE from '../apiBase';
 
 import TickerBar from './TickerBar';
@@ -15,8 +15,64 @@ import AccountPanel from './AccountPanel';
 
 const GS_LOGO_SRC = 'https://companieslogo.com/img/orig/GS.D-55ee2e2e.png?t=1740321324';
 
-function TopBar({ onSettings, onAccount }) {
+function TopBar({ onSettings, onAccount, favorites = new Set(), articles = [] }) {
   const iconStroke = 'rgba(255,255,255,0.88)';
+  const dropRef     = useRef(null);
+  const pillRef     = useRef(null); // ref on the pill button itself for position calc
+  const [intelOpen, setIntelOpen]   = useState(false);
+  const [intelStatus, setIntelStatus] = useState(null); // null | 'loading' | 'done' | 'error'
+  const [intelText, setIntelText]   = useState('');
+  const [intelFunds, setIntelFunds] = useState([]);
+  const [intelAt, setIntelAt]       = useState(null);
+  const [dropPos, setDropPos]       = useState({ top: 0, right: 0 });
+
+  const profileName = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('mf_profile_v1') || '{}').name || ''; }
+    catch { return ''; }
+  }, []);
+
+  // close dropdown on outside click
+  useEffect(() => {
+    if (!intelOpen) return;
+    const h = (e) => { if (!dropRef.current?.contains(e.target)) setIntelOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [intelOpen]);
+
+  const fetchBrief = useCallback(async () => {
+    const tickers = [...favorites];
+    if (!tickers.length) return;
+    setIntelStatus('loading');
+    setIntelText('');
+    try {
+      const res = await fetchMorningBrief({ favorites: tickers, articles, name: profileName });
+      setIntelText(res.brief || '');
+      setIntelFunds(res.funds || []);
+      setIntelAt(res.generatedAt || new Date().toISOString());
+      setIntelStatus('done');
+      // Auto-send to registered alerts email (non-blocking)
+      try {
+        const alertsEmail = JSON.parse(localStorage.getItem('mf_email_alerts_v1') || '{}').email;
+        if (alertsEmail) sendDigestEmail({ to: alertsEmail, name: profileName, favorites: tickers, articles }).catch(() => {});
+      } catch { /* ignore */ }
+    } catch {
+      setIntelStatus('error');
+    }
+  }, [favorites, articles, profileName]);
+
+  const handleToggle = () => {
+    const next = !intelOpen;
+    if (next) {
+      // Calculate fixed viewport position from the pill button
+      const rect = pillRef.current?.getBoundingClientRect();
+      if (rect) setDropPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+      if (intelStatus === null || intelStatus === 'error') fetchBrief();
+    }
+    setIntelOpen(next);
+  };
+
+  const hasFavs = favorites.size > 0;
+
   return (
     <header style={{
       background: 'linear-gradient(90deg, #092C61 0%, #7399C6 100%)',
@@ -28,62 +84,182 @@ function TopBar({ onSettings, onAccount }) {
       alignItems: 'center',
       gap: 16,
       flexShrink: 0,
+      position: 'relative',
+      zIndex: 200,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-        <img
-          src={GS_LOGO_SRC}
-          alt="Goldman Sachs"
-          width={28}
-          height={28}
-          draggable={false}
-          style={{ display: 'block', flexShrink: 0 }}
-        />
-        <span style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: '#fff',
-          letterSpacing: '0.01em',
-          whiteSpace: 'nowrap',
-        }}>Fund Dashboard</span>
+        <img src={GS_LOGO_SRC} alt="Goldman Sachs" width={28} height={28} draggable={false} style={{ display: 'block', flexShrink: 0 }} />
+        <span style={{ fontSize: 14, fontWeight: 600, color: '#fff', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>Fund Dashboard</span>
       </div>
+
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-        <button
-          type="button"
-          onClick={onAccount}
-          title="Account"
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 8,
-            display: 'flex',
-            alignItems: 'center',
-            borderRadius: 6,
-          }}
+
+        {/* ── Intelligence pill ── */}
+        <div ref={dropRef} style={{ position: 'relative' }}>
+          <button
+            ref={pillRef}
+            type="button"
+            onClick={handleToggle}
+            title={hasFavs ? 'GS Intelligence — AI portfolio summary' : 'Star funds to unlock Intelligence'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: intelOpen ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.45)',
+              borderRadius: 20, padding: '5px 13px 5px 9px',
+              cursor: hasFavs ? 'pointer' : 'default',
+              opacity: hasFavs ? 1 : 0.45,
+              transition: 'background 0.15s, border-color 0.15s',
+              color: '#fff',
+              boxShadow: '0 1px 6px rgba(0,0,0,0.18)',
+            }}
+            onMouseEnter={e => { if (hasFavs) e.currentTarget.style.background = 'rgba(255,255,255,0.30)'; }}
+            onMouseLeave={e => { if (!intelOpen) e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
+          >
+            {/* sparkle icon */}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"/>
+            </svg>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>Intelligence</span>
+            {/* loading dot */}
+            {intelStatus === 'loading' && (
+              <div style={{ width: 7, height: 7, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'topbarSpin 0.7s linear infinite' }} />
+            )}
+          </button>
+
+          {/* ── Dropdown panel — fixed so it escapes the header stacking context ── */}
+          {intelOpen && (
+            <div style={{
+              position: 'fixed', top: dropPos.top, right: dropPos.right,
+              width: 360,
+              background: 'linear-gradient(160deg, #0d1f38 0%, #0a1628 100%)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 16,
+              boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+              overflow: 'hidden',
+              zIndex: 500,
+            }}>
+              {/* panel header */}
+              <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(115,153,198,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"/>
+                  </svg>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#e8edf2', letterSpacing: '0.01em' }}>Portfolio Intelligence</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {intelStatus === 'done' && (
+                    <button
+                      onClick={fetchBrief}
+                      title="Refresh"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: 2, display: 'flex', alignItems: 'center' }}
+                      onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+                      onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                      </svg>
+                    </button>
+                  )}
+                  {intelAt && intelStatus === 'done' && (
+                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>
+                      {new Date(intelAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* content */}
+              <div style={{ maxHeight: 360, overflowY: 'auto', padding: '14px 18px' }}>
+
+                {intelStatus === 'loading' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '28px 0' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.08)', borderTopColor: '#7399C6', animation: 'topbarSpin 0.8s linear infinite' }} />
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Analyzing {favorites.size} fund{favorites.size > 1 ? 's' : ''}…</span>
+                  </div>
+                )}
+
+                {intelStatus === 'error' && (
+                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <p style={{ fontSize: 12, color: 'rgba(220,100,80,0.9)', marginBottom: 10 }}>Could not generate summary.</p>
+                    <button onClick={fetchBrief} style={{ fontSize: 11, color: '#7399C6', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Try again</button>
+                  </div>
+                )}
+
+                {intelStatus === 'done' && intelText && (
+                  <div>
+                    {/* AI brief paragraphs */}
+                    {intelText.split(/\n{2,}/).map((para, i) => (
+                      <p key={i} style={{ margin: i === 0 ? '0 0 11px' : '0 0 11px', fontSize: 12.5, color: 'rgba(232,237,242,0.88)', lineHeight: 1.72 }}>
+                        {para.trim().split(/\*\*(.*?)\*\*/).map((seg, j) =>
+                          j % 2 === 1
+                            ? <strong key={j} style={{ color: '#a8c4e8', fontWeight: 700 }}>{seg}</strong>
+                            : seg
+                        )}
+                      </p>
+                    ))}
+
+                    {/* Fund chips */}
+                    {intelFunds.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                        {intelFunds.map(f => {
+                          const up = f.changePct != null && f.changePct >= 0;
+                          const clr = up ? '#4ade80' : '#f87171';
+                          const pct = f.changePct != null ? `${up ? '+' : ''}${f.changePct.toFixed(2)}%` : '—';
+                          return (
+                            <div key={f.ticker} style={{
+                              background: 'rgba(255,255,255,0.06)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: 8, padding: '5px 10px',
+                              display: 'flex', alignItems: 'center', gap: 6,
+                            }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#e8edf2' }}>{f.ticker}</span>
+                              <span style={{ fontSize: 10, color: clr, fontWeight: 600 }}>{pct}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {intelStatus === null && (
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', padding: '20px 0' }}>Loading your portfolio summary…</p>
+                )}
+              </div>
+
+              {/* powered-by footer */}
+              <div style={{ padding: '10px 18px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(115,153,198,0.6)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"/>
+                </svg>
+                <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.02em' }}>
+                  Powered by <strong style={{ color: 'rgba(115,153,198,0.7)', fontWeight: 600 }}>GS Bot</strong> &nbsp;·&nbsp; <strong style={{ color: 'rgba(115,153,198,0.7)', fontWeight: 600 }}>Google Gemini</strong>
+                </span>
+              </div>
+            </div>
+          )}
+
+          <style>{`
+            @keyframes topbarSpin {
+              from { transform: rotate(0deg); }
+              to   { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+
+        {/* ── Account button ── */}
+        <button type="button" onClick={onAccount} title="Account" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', alignItems: 'center', borderRadius: 6 }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
-        >
+          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={iconStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
           </svg>
         </button>
-        <button
-          type="button"
-          onClick={onSettings}
-          title="Settings"
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 8,
-            display: 'flex',
-            alignItems: 'center',
-            borderRadius: 6,
-          }}
+
+        {/* ── Settings button ── */}
+        <button type="button" onClick={onSettings} title="Settings" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', alignItems: 'center', borderRadius: 6 }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
-        >
+          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={iconStroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -409,8 +585,8 @@ export default function TradingDashboard() {
   return (
     <ThemeCtx.Provider value={T}>
       <div style={{ height: '100vh', background: T.pageBg, display: 'flex', flexDirection: 'column', fontFamily: FONT_UI, overflow: 'hidden' }}>
+        <TopBar onSettings={() => setSettingsOpen(true)} onAccount={() => setAccountOpen(true)} favorites={favorites} articles={newsArticles} />
         <TickerBar />
-        <TopBar onSettings={() => setSettingsOpen(true)} onAccount={() => setAccountOpen(true)} />
         <div style={{
           flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0, gap: 8, padding: '6px 8px 8px',
           opacity: contentIn ? 1 : 0,

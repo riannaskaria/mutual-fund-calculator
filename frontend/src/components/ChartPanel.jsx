@@ -262,7 +262,7 @@ function PriceChart({ ticker, quote }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           {footerStats.map(s => (
-            <div key={s.label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '7px 14px' }}>
+            <div key={s.label} style={{ background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 9, padding: '7px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
               <div style={{ fontSize: 9, color: T.textMute, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{s.label}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{s.value}</div>
             </div>
@@ -433,7 +433,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
     return points;
   }, [effective, principal, yearsNum, ticker, periodsPerYear, pmt]);
 
-  const pillInput = { background: T.inputBg, border: `1px solid ${T.border}`, borderRadius: 9999, padding: '9px 16px', fontSize: 13, color: T.text, outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' };
+  const pillInput = { background: T.solidPanel, border: `1.5px solid ${T.borderSub}`, borderRadius: 12, padding: '10px 16px', fontSize: 15, fontWeight: 600, color: T.text, outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' };
 
   const switchStyle = {
     width: 36, height: 20, borderRadius: 9999, border: 'none', cursor: 'pointer', position: 'relative',
@@ -444,20 +444,20 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
       {/* ── Inputs row 1: principal + years + calculate + formula ── */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexShrink: 0, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 10, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, paddingLeft: 4 }}>Investment ($)</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <label style={{ fontSize: 10, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, paddingLeft: 2 }}>Investment ($)</label>
           <input type="number" value={investmentAmount} onChange={e => setInvestmentAmount(e.target.value)}
-            placeholder="10000" min={1} step={1} style={{ ...pillInput, width: 140 }}
-            onFocus={e => e.target.style.borderColor = T.focusRing}
-            onBlur={e => e.target.style.borderColor = T.border}
+            placeholder="10000" min={1} step={1} style={{ ...pillInput, width: 148 }}
+            onFocus={e => { e.target.style.borderColor = T.focusRing; e.target.style.boxShadow = `0 0 0 3px ${T.focusRing}22`; }}
+            onBlur={e => { e.target.style.borderColor = T.borderSub; e.target.style.boxShadow = '0 1px 4px rgba(0,0,0,0.07)'; }}
           />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 10, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, paddingLeft: 4 }}>Years</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <label style={{ fontSize: 10, color: T.accent, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, paddingLeft: 2 }}>Years</label>
           <input type="number" value={years} onChange={e => setYears(e.target.value)}
-            placeholder="10" min={1} max={50} step={1} style={{ ...pillInput, width: 80 }}
-            onFocus={e => e.target.style.borderColor = T.focusRing}
-            onBlur={e => e.target.style.borderColor = T.border}
+            placeholder="10" min={1} max={50} step={1} style={{ ...pillInput, width: 84 }}
+            onFocus={e => { e.target.style.borderColor = T.focusRing; e.target.style.boxShadow = `0 0 0 3px ${T.focusRing}22`; }}
+            onBlur={e => { e.target.style.borderColor = T.borderSub; e.target.style.boxShadow = '0 1px 4px rgba(0,0,0,0.07)'; }}
           />
         </div>
       </div>
@@ -488,8 +488,8 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
             gap: 10,
             alignItems: 'flex-end',
             padding: 12,
-            background: T.cardBg,
-            border: `1px solid ${T.border}`,
+            background: T.solidPanel,
+            border: `1px solid ${T.borderSub}`,
             borderRadius: 10,
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -544,7 +544,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
           {/* Projection header — mirrors Price Chart header row */}
           <div style={{ flexShrink: 0 }}>
-            <div style={{ fontSize: 10, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600, marginBottom: 6 }}>
+            <div style={{ fontSize: 10, color: T.textMute, letterSpacing: '0.05em', fontWeight: 500, fontStyle: 'italic', marginBottom: 6 }}>
               Projected after {yearsNum}yr
               {pmt > 0 && (
                 <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: '0' }}>
@@ -554,7 +554,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-                <span style={{ fontSize: 32, fontWeight: 700, color: T.positive, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                <span style={{ fontSize: 42, fontWeight: 700, color: T.positive, letterSpacing: '-0.03em', lineHeight: 1 }}>
                   {fmtMoneyFull(totalFV)}
                 </span>
                 {totalContributed > 0 && (
@@ -614,7 +614,6 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
             </div>
           </div>
 
-
           {/* Growth chart */}
           <div style={{ flex: 1, minHeight: 130, position: 'relative' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -651,21 +650,26 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
             </ResponsiveContainer>
           </div>
 
-          {/* CAPM params — matches Price Chart footer style */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {[
-                { label: 'Beta', value: beta.toFixed(3) },
-                { label: 'Risk-Free Rate', value: `${rf.toFixed(2)}%` },
-                { label: 'Alpha vs Rf', value: `${alpha >= 0 ? '+' : ''}${alpha.toFixed(2)}%`, accent: alpha >= 0 },
-                { label: 'CAPM Rate', value: `${rate.toFixed(2)}%` },
-              ].map(s => (
-                <div key={s.label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '7px 14px' }}>
-                  <div style={{ fontSize: 9, color: T.textMute, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{s.label}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: s.accent != null ? (s.accent ? T.positive : T.negative) : T.text }}>{s.value}</div>
-                </div>
-              ))}
-            </div>
+          {/* CAPM params */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
+            {[
+              { label: 'Beta', value: beta.toFixed(3) },
+              { label: 'Risk-Free Rate', value: `${rf.toFixed(2)}%` },
+              { label: 'Alpha vs Rf', value: `${alpha >= 0 ? '+' : ''}${alpha.toFixed(2)}%`, accent: alpha >= 0 ? true : false },
+              { label: 'CAPM Rate', value: `${rate.toFixed(2)}%` },
+            ].map(s => (
+              <div key={s.label} style={{
+                background: T.solidPanel,
+                border: `1px solid ${T.borderSub}`,
+                borderRadius: 12,
+                padding: '8px 16px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                flex: '1 1 auto',
+              }}>
+                <div style={{ fontSize: 9, color: T.textMute, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>{s.label}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: s.accent != null ? (s.accent ? T.positive : T.negative) : T.text, letterSpacing: '-0.01em' }}>{s.value}</div>
+              </div>
+            ))}
           </div>
 
           {/* Saved projections history */}
@@ -678,7 +682,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
                 {savedCalcs.map(c => (
                   <div key={c.id} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                    background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8,
+                    background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 8,
                     padding: '7px 10px',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
@@ -734,7 +738,7 @@ function CAPMCalculator({ ticker, investmentAmount, years, futureValue, calculat
 
 function QuickFactCard({ label, value, T }) {
   return (
-    <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '7px 14px' }}>
+    <div style={{ background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 9, padding: '7px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div style={{ fontSize: 9, color: T.textMute, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
       <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{value}</div>
     </div>
@@ -770,29 +774,36 @@ function FundInformationTab({ ticker, quote }) {
     const longItems = longKeys.map(k => byKey[k]).filter(Boolean);
 
     return (
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
-        {quickFacts.some(f => !f.isPlaceholder) && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, width: 220 }}>
-            {quickFacts.map(({ label, value, isPlaceholder }) => (
-              <div key={label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 6, padding: '7px 14px' }}>
-                <div style={{ fontSize: 9, color: T.textMute, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: isPlaceholder ? T.textFaint : T.text, fontStyle: isPlaceholder ? 'italic' : 'normal' }}>
-                  {isPlaceholder ? '—' : value}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', width: '100%' }}>
+          {quickFacts.some(f => !f.isPlaceholder) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0, width: 200 }}>
+              {quickFacts.map(({ label, value, isPlaceholder }) => (
+                <div key={label} style={{ background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 9, padding: '5px 10px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <div style={{ fontSize: 8.5, color: T.textMute, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: isPlaceholder ? T.textFaint : T.text, fontStyle: isPlaceholder ? 'italic' : 'normal' }}>
+                    {isPlaceholder ? '—' : value}
+                  </div>
                 </div>
+              ))}
+            </div>
+          )}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+            {longItems.filter(f => !f.isPlaceholder).map(({ label, value }) => (
+              <div key={label} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
+                <div style={{ fontSize: 8.5, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 4 }}>{label}</div>
+                <div style={{ fontSize: 12.5, color: T.text, lineHeight: 1.6 }}>{value}</div>
               </div>
             ))}
-            <div style={{ fontSize: 9, color: T.textFaint, lineHeight: 1.5, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 4 }}>
-              Data is editorial and for reference only. Verify material facts independently before investing.
-            </div>
           </div>
-        )}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-          {longItems.filter(f => !f.isPlaceholder).map(({ label, value }) => (
-            <div key={label} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
-              <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>{label}</div>
-              <div style={{ fontSize: 13, color: T.text, lineHeight: 1.65 }}>{value}</div>
-            </div>
-          ))}
+        </div>
+        {/* Spacer pushes disclosure to bottom */}
+        <div style={{ flex: 1 }} />
+        <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+          <span style={{ fontSize: 8.5, color: T.textFaint, lineHeight: 1.5 }}>
+            Data is editorial and for reference only. Verify material facts independently before investing.
+          </span>
+          <span style={{ fontSize: 8.5, color: T.textFaint, opacity: 0.6 }}>Goldman Sachs Fund Dashboard</span>
         </div>
       </div>
     );
@@ -924,30 +935,34 @@ function FundInformationTab({ ticker, quote }) {
     ].filter(Boolean);
 
     return (
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, width: 220 }}>
-          {quickFacts.map(({ label, value }) => (
-            <QuickFactCard key={label} label={label} value={value} T={T} />
-          ))}
-          <div style={{ fontSize: 9, color: T.textFaint, lineHeight: 1.5, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 4 }}>
-            Data sourced from Yahoo Finance. Verify independently before investing.
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, width: 220 }}>
+            {quickFacts.map(({ label, value }) => (
+              <QuickFactCard key={label} label={label} value={value} T={T} />
+            ))}
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
+            {longSections.map(({ label, value, hasLink }) => (
+              <div key={label} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12, paddingBottom: 12 }}>
+                <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>{label}</div>
+                <div style={{ fontSize: 13, color: T.text, lineHeight: 1.65 }}>
+                  {hasLink
+                    ? value.split(richData.website).flatMap((part, i, arr) =>
+                        i < arr.length - 1
+                          ? [part, <a key={i} href={richData.website} target="_blank" rel="noopener noreferrer" style={{ color: T.accent }}>{richData.website}</a>]
+                          : [part]
+                      )
+                    : value}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
-          {longSections.map(({ label, value, hasLink }) => (
-            <div key={label} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12, paddingBottom: 12 }}>
-              <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>{label}</div>
-              <div style={{ fontSize: 13, color: T.text, lineHeight: 1.65 }}>
-                {hasLink
-                  ? value.split(richData.website).flatMap((part, i, arr) =>
-                      i < arr.length - 1
-                        ? [part, <a key={i} href={richData.website} target="_blank" rel="noopener noreferrer" style={{ color: T.accent }}>{richData.website}</a>]
-                        : [part]
-                    )
-                  : value}
-              </div>
-            </div>
-          ))}
+        <div style={{ flex: 1 }} />
+        <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+          <span style={{ fontSize: 8.5, color: T.textFaint, lineHeight: 1.5 }}>Data sourced from Yahoo Finance. Verify independently before investing.</span>
+          <span style={{ fontSize: 8.5, color: T.textFaint, opacity: 0.6 }}>Goldman Sachs Fund Dashboard</span>
         </div>
       </div>
     );
@@ -966,15 +981,21 @@ function FundInformationTab({ ticker, quote }) {
     ].filter(Boolean);
 
     return (
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, width: 220 }}>
-          {quickFacts.map(({ label, value }) => <QuickFactCard key={label} label={label} value={value} T={T} />)}
-          <div style={{ fontSize: 9, color: T.textFaint, lineHeight: 1.5, borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 4 }}>
-            {richFailed ? 'Could not load full details from Yahoo Finance.' : 'Loading full details…'}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, width: 220 }}>
+            {quickFacts.map(({ label, value }) => <QuickFactCard key={label} label={label} value={value} T={T} />)}
+          </div>
+          <div style={{ flex: 1, minWidth: 0, paddingTop: 4 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{quote.longName || quote.shortName || ticker}</div>
           </div>
         </div>
-        <div style={{ flex: 1, minWidth: 0, paddingTop: 4 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{quote.longName || quote.shortName || ticker}</div>
+        <div style={{ flex: 1 }} />
+        <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+          <span style={{ fontSize: 8.5, color: T.textFaint }}>
+            {richFailed ? 'Could not load full details from Yahoo Finance.' : 'Loading full details from Yahoo Finance…'}
+          </span>
+          <span style={{ fontSize: 8.5, color: T.textFaint, opacity: 0.6 }}>Goldman Sachs Fund Dashboard</span>
         </div>
       </div>
     );
@@ -982,7 +1003,7 @@ function FundInformationTab({ ticker, quote }) {
 
   // Nothing available yet
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', gap: 10, textAlign: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 10, textAlign: 'center' }}>
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.border} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
@@ -1020,7 +1041,7 @@ function QuantAnalysisTab({ ticker }) {
   const stats = useMemo(() => computeQuantStats(raw.data), [raw.data]);
 
   const statCard = (label, value, sub) => (
-    <div key={label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '10px 14px', minWidth: 0 }}>
+    <div key={label} style={{ background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 10, padding: '10px 14px', minWidth: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{value}</div>
       {sub && <div style={{ fontSize: 10, color: T.textFaint, marginTop: 4 }}>{sub}</div>}
@@ -1323,7 +1344,7 @@ export default function ChartPanel({ ticker, quote, investmentAmount, years, fut
         ))}
       </div>
 
-      <div style={{ flex: 1, padding: 16, overflow: 'auto' }}>
+      <div style={{ flex: 1, padding: 16, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         {activeTab === 'Price Chart' && <PriceChart ticker={ticker} quote={quote} />}
         {activeTab === 'CAPM Calculator' && (
           <CAPMCalculator
