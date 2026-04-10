@@ -128,7 +128,18 @@ RULES:
 - Under 220 words total
 - Start immediately with the analysis — no greeting, no "here is your briefing"`;
 
-  const result = await model.generateContent(prompt);
+  let result;
+  try {
+    result = await model.generateContent(prompt);
+  } catch (error) {
+    console.warn('[Gemini 2.5] Primary generation failed:', error.message);
+    const fallbackModel = getClient().getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: 'You are a Goldman Sachs senior portfolio manager. Be confident, direct, and leverage your live search capabilities to deeply understand market moves. No filler, no robotic phrasing.',
+      generationConfig: { temperature: 0.2 }
+    });
+    result = await fallbackModel.generateContent(prompt);
+  }
   return result.response.text().trim();
 }
 
@@ -158,7 +169,18 @@ ${rangeLine}
 
 In 1–2 sentences: what likely explains this move, and what should the investor consider doing right now? Be specific, use the numbers, no disclaimers, no intro — just the insight.`;
 
-  const result = await model.generateContent(prompt);
+  let result;
+  try {
+    result = await model.generateContent(prompt);
+  } catch (error) {
+    console.warn('[Gemini 2.5] Alert generation failed:', error.message);
+    const fallbackModel = getClient().getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: 'You are a Goldman Sachs senior advisor. Provide exactly 1-2 sentence insights on market movements using live search data.',
+      generationConfig: { temperature: 0.2 }
+    });
+    result = await fallbackModel.generateContent(prompt);
+  }
   return result.response.text().trim();
 }
 
