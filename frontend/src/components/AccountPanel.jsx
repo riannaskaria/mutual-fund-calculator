@@ -954,7 +954,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 4 }}>GS Intelligence</div>
                                             <div style={{ fontSize: 12, color: T.textSub, lineHeight: 1.55 }}>
-                                                AI-synthesizes your {favTickers.length > 0 ? `${favTickers.length} favorite fund${favTickers.length > 1 ? 's' : ''}` : 'favorites'} into a personalized morning briefing — live prices, news relevance, and portfolio outlook.
+                                                AI-synthesizes your {favTickers.length > 0 ? `${favTickers.length} favorite fund${favTickers.length > 1 ? 's' : ''}` : 'favorites'} into a personalized portfolio briefing — live prices, news relevance, and portfolio outlook.
                                             </div>
                                         </div>
                                     </div>
@@ -983,7 +983,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                 <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
                                                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
                                             </svg>
-                                            {briefStatus === 'done' ? 'Regenerate Brief' : 'Generate Morning Brief'}
+                                            {briefStatus === 'done' ? 'Regenerate Brief' : 'Generate Portfolio Brief'}
                                         </button>
                                     )}
 
