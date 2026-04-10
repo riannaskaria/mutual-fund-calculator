@@ -239,7 +239,7 @@ export async function fetchMorningBrief({ favorites, articles = [], name = '' } 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ favorites, articles, name, timeZone }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(50000),
   });
   return handleResponse(response);
 }

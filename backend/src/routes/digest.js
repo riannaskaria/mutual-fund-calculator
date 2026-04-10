@@ -103,7 +103,7 @@ async function generateBrief({ funds, articles, name, timeZone }) {
   }).join('\n');
 
   const newsText = Array.isArray(articles) && articles.length > 0
-    ? articles.slice(0, 10).map((a, i) => `${i + 1}. [${a.tag || 'Market'}] ${a.title} — ${a.source || ''}`).join('\n')
+    ? articles.slice(0, 4).map((a, i) => `${i + 1}. [${a.tag || 'Market'}] ${a.title} — ${a.source || ''}`).join('\n')
     : 'No recent news provided.';
 
   const prompt = `Write a personalized ${timePart === 'portfolio' ? 'portfolio' : timePart} briefing for ${name ? `a client named ${name}` : 'a client'} on ${dateStr}. Use your search tool to pinpoint exactly why the standout movers shifted today.
