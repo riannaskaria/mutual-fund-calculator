@@ -102,9 +102,6 @@ RULES:
 
   const result = await model.generateContent(prompt);
   return result.response.text().trim();
-
-  const result = await model.generateContent(prompt);
-  return result.response.text().trim();
 }
 
 async function generateAlertContext({ ticker, direction, targetPrice, currentPrice, name52wHigh, name52wLow }) {
