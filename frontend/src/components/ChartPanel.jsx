@@ -771,66 +771,75 @@ function FundInformationTab({ ticker, quote }) {
     const finHighlightsText = finHighlightParts.join(' · ');
 
     // ── Build named sections from raw description ────────────────────────────
-    const desc = richData.description || '';
-    // Replace periods in known abbreviations so they don't split sentences
-    const normalized = desc.replace(/\b(Inc|Corp|Ltd|Co|U\.S|U\.K|Mr|Mrs|Dr|vs|etc|No|approx)\./g, '$1\u2024');
-    const rawSentences = normalized.split(/\.\s+(?=[A-Z])/).map(s => s.replace(/\u2024/g, '.').trim()).filter(Boolean);
-    // Ensure each sentence ends with a period
-    const sentences = rawSentences.map(s => /[.!?]$/.test(s) ? s : s + '.');
+    let objective = '', overview = '', riskText = '', notesText = '';
 
-    // First sentence → Investment Objective
-    const objective = sentences[0]?.trim() || '';
-
-    // Middle sentences → Business Overview (cap at ~500 chars)
-    const historyRe = /incorporat|founded|headquarter/i;
-    const lastSentence = sentences[sentences.length - 1] || '';
-    const hasHistory = historyRe.test(lastSentence) && sentences.length > 2;
-    const middleSentences = hasHistory ? sentences.slice(1, -1) : sentences.slice(1);
-    let overviewFull = middleSentences.join(' ').trim();
-    const OVERVIEW_LIMIT = 520;
-    const overview = overviewFull.length > OVERVIEW_LIMIT
-      ? overviewFull.slice(0, overviewFull.lastIndexOf(' ', OVERVIEW_LIMIT)) + '…'
-      : overviewFull;
-
-    // Last sentence (if founding/location) → partial company history
-    const history = hasHistory ? lastSentence.trim() : '';
-
-    // Auto-generate risk considerations from beta + sector
-    const beta = richData.beta != null ? Number(richData.beta) : null;
-    const riskParts = [];
-    if (beta != null) {
-      if (beta > 1.5)      riskParts.push(`High market sensitivity (beta ${beta.toFixed(2)}) — moves roughly ${beta.toFixed(1)}× the market, amplifying both gains and losses.`);
-      else if (beta > 1.1) riskParts.push(`Above-average market sensitivity (beta ${beta.toFixed(2)}) — slightly more volatile than the broader market.`);
-      else if (beta > 0.8) riskParts.push(`Market-level volatility (beta ${beta.toFixed(2)}) — tends to track the broader market closely.`);
-      else if (beta > 0)   riskParts.push(`Defensive profile (beta ${beta.toFixed(2)}) — historically less volatile than the broader market.`);
+    if (richData.isAI) {
+      objective = richData.objective || '';
+      overview  = richData.strategy || '';
+      riskText  = richData.risks || '';
+      notesText = richData.notes || '';
+    } else {
+      const desc = richData.description || '';
+      // Replace periods in known abbreviations so they don't split sentences
+      const normalized = desc.replace(/\b(Inc|Corp|Ltd|Co|U\.S|U\.K|Mr|Mrs|Dr|vs|etc|No|approx)\./g, '$1\u2024');
+      const rawSentences = normalized.split(/\.\s+(?=[A-Z])/).map(s => s.replace(/\u2024/g, '.').trim()).filter(Boolean);
+      // Ensure each sentence ends with a period
+      const sentences = rawSentences.map(s => /[.!?]$/.test(s) ? s : s + '.');
+  
+      // First sentence → Investment Objective
+      objective = sentences[0]?.trim() || '';
+  
+      // Middle sentences → Business Overview (cap at ~500 chars)
+      const historyRe = /incorporat|founded|headquarter/i;
+      const lastSentence = sentences[sentences.length - 1] || '';
+      const hasHistory = historyRe.test(lastSentence) && sentences.length > 2;
+      const middleSentences = hasHistory ? sentences.slice(1, -1) : sentences.slice(1);
+      let overviewFull = middleSentences.join(' ').trim();
+      const OVERVIEW_LIMIT = 520;
+      overview = overviewFull.length > OVERVIEW_LIMIT
+        ? overviewFull.slice(0, overviewFull.lastIndexOf(' ', OVERVIEW_LIMIT)) + '…'
+        : overviewFull;
+  
+      // Last sentence (if founding/location) → partial company history
+      const history = hasHistory ? lastSentence.trim() : '';
+  
+      // Auto-generate risk considerations from beta + sector
+      const beta = richData.beta != null ? Number(richData.beta) : null;
+      const riskParts = [];
+      if (beta != null) {
+        if (beta > 1.5)      riskParts.push(`High market sensitivity (beta ${beta.toFixed(2)}) — moves roughly ${beta.toFixed(1)}× the market, amplifying both gains and losses.`);
+        else if (beta > 1.1) riskParts.push(`Above-average market sensitivity (beta ${beta.toFixed(2)}) — slightly more volatile than the broader market.`);
+        else if (beta > 0.8) riskParts.push(`Market-level volatility (beta ${beta.toFixed(2)}) — tends to track the broader market closely.`);
+        else if (beta > 0)   riskParts.push(`Defensive profile (beta ${beta.toFixed(2)}) — historically less volatile than the broader market.`);
+      }
+      const SECTOR_RISK = {
+        'Technology': 'Technology stocks are subject to rapid innovation cycles, regulatory scrutiny, and valuation compression in rising-rate environments.',
+        'Healthcare': 'Healthcare companies face regulatory approval risk, pricing pressure, and patent expiration.',
+        'Financial Services': 'Financial stocks are sensitive to interest rate changes, credit cycles, and capital regulation.',
+        'Consumer Cyclical': 'Consumer discretionary names are exposed to economic cycles and shifts in consumer spending.',
+        'Energy': 'Energy companies are exposed to commodity price volatility and long-term energy-transition risk.',
+        'Real Estate': 'Real estate holdings are sensitive to interest rates, occupancy trends, and local market dynamics.',
+        'Utilities': 'Utilities offer stable cash flows but are sensitive to rate hikes and regulatory decisions.',
+        'Communication Services': 'Communication companies face subscription churn, rising content costs, and platform competition.',
+        'Industrials': 'Industrial names are exposed to economic cycles, supply-chain disruptions, and input-cost inflation.',
+        'Basic Materials': 'Materials companies are highly sensitive to commodity prices, global demand, and currency moves.',
+        'Consumer Defensive': 'Defensive consumer names offer relative stability but may lag significantly in strong bull markets.',
+      };
+      if (richData.sector && SECTOR_RISK[richData.sector]) riskParts.push(SECTOR_RISK[richData.sector]);
+      if (!richData.dividendYield) riskParts.push('This security does not currently pay a dividend, so total return depends entirely on price appreciation.');
+      riskText = riskParts.join(' ');
+  
+      // Notes: founding/HQ history + website
+      const noteParts = [];
+      if (history) noteParts.push(history);
+      if (richData.employees) noteParts.push(`The company employs approximately ${Number(richData.employees).toLocaleString()} people.`);
+      if (richData.website) noteParts.push(richData.website);
+      notesText = noteParts.filter(Boolean).join(' ');
     }
-    const SECTOR_RISK = {
-      'Technology': 'Technology stocks are subject to rapid innovation cycles, regulatory scrutiny, and valuation compression in rising-rate environments.',
-      'Healthcare': 'Healthcare companies face regulatory approval risk, pricing pressure, and patent expiration.',
-      'Financial Services': 'Financial stocks are sensitive to interest rate changes, credit cycles, and capital regulation.',
-      'Consumer Cyclical': 'Consumer discretionary names are exposed to economic cycles and shifts in consumer spending.',
-      'Energy': 'Energy companies are exposed to commodity price volatility and long-term energy-transition risk.',
-      'Real Estate': 'Real estate holdings are sensitive to interest rates, occupancy trends, and local market dynamics.',
-      'Utilities': 'Utilities offer stable cash flows but are sensitive to rate hikes and regulatory decisions.',
-      'Communication Services': 'Communication companies face subscription churn, rising content costs, and platform competition.',
-      'Industrials': 'Industrial names are exposed to economic cycles, supply-chain disruptions, and input-cost inflation.',
-      'Basic Materials': 'Materials companies are highly sensitive to commodity prices, global demand, and currency moves.',
-      'Consumer Defensive': 'Defensive consumer names offer relative stability but may lag significantly in strong bull markets.',
-    };
-    if (richData.sector && SECTOR_RISK[richData.sector]) riskParts.push(SECTOR_RISK[richData.sector]);
-    if (!richData.dividendYield) riskParts.push('This security does not currently pay a dividend, so total return depends entirely on price appreciation.');
-    const riskText = riskParts.join(' ');
-
-    // Notes: founding/HQ history + website
-    const noteParts = [];
-    if (history) noteParts.push(history);
-    if (richData.employees) noteParts.push(`The company employs approximately ${Number(richData.employees).toLocaleString()} people.`);
-    if (richData.website) noteParts.push(richData.website);
-    const notesText = noteParts.filter(Boolean).join(' ');
 
     const longSections = [
       objective  && { label: 'Investment Objective',  value: objective },
-      overview && overview !== objective && { label: 'Business Overview', value: overview },
+      overview && overview !== objective && { label: richData.isAI ? 'Strategy & Approach' : 'Business Overview', value: overview },
       riskText   && { label: 'Risk Considerations',   value: riskText },
       finHighlightsText && { label: 'Financial Highlights', value: finHighlightsText },
       notesText  && { label: 'Notes',                 value: notesText, hasLink: richData.website && notesText.includes(richData.website) },
