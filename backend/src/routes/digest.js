@@ -8,8 +8,8 @@
 
 require('dotenv').config({ quiet: true });
 const express = require('express');
-const router  = express.Router();
-const axios   = require('axios');
+const router = express.Router();
+const axios = require('axios');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const GS_LOGO = 'https://companieslogo.com/img/orig/GS.D-55ee2e2e.png?t=1740321324';
@@ -24,23 +24,23 @@ function getClient() {
 
 async function fetchQuote(ticker) {
   try {
-    const url  = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
     const resp = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 8000 });
     const meta = resp.data?.chart?.result?.[0]?.meta;
     if (!meta) return null;
-    const price     = meta.regularMarketPrice    ?? null;
-    const prev      = meta.chartPreviousClose    ?? null;
-    const change    = price != null && prev != null ? price - prev : null;
-    const changePct = change != null && prev       ? (change / prev) * 100 : null;
+    const price = meta.regularMarketPrice ?? null;
+    const prev = meta.chartPreviousClose ?? null;
+    const change = price != null && prev != null ? price - prev : null;
+    const changePct = change != null && prev ? (change / prev) * 100 : null;
     return {
-      ticker:          meta.symbol,
-      name:            meta.longName || meta.shortName || meta.symbol,
+      ticker: meta.symbol,
+      name: meta.longName || meta.shortName || meta.symbol,
       price,
-      previousClose:   prev,
-      change:          change    != null ? +change.toFixed(4)    : null,
-      changePct:       changePct != null ? +changePct.toFixed(4) : null,
+      previousClose: prev,
+      change: change != null ? +change.toFixed(4) : null,
+      changePct: changePct != null ? +changePct.toFixed(4) : null,
       fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh ?? null,
-      fiftyTwoWeekLow:  meta.fiftyTwoWeekLow  ?? null,
+      fiftyTwoWeekLow: meta.fiftyTwoWeekLow ?? null,
     };
   } catch {
     return null;
@@ -87,15 +87,15 @@ async function generateBrief({ funds, articles, name, timeZone }) {
   const timePart = getGreetingTimePart(timeZone);
 
   const fundsText = funds.map(f => {
-    const pct    = f.changePct != null ? `${f.changePct >= 0 ? '+' : ''}${f.changePct.toFixed(2)}%` : 'N/A';
-    const price  = f.price != null ? `$${f.price.toFixed(2)}` : 'N/A';
+    const pct = f.changePct != null ? `${f.changePct >= 0 ? '+' : ''}${f.changePct.toFixed(2)}%` : 'N/A';
+    const price = f.price != null ? `$${f.price.toFixed(2)}` : 'N/A';
     const vsHigh = f.fiftyTwoWeekHigh && f.price
       ? ` | ${(((f.price - f.fiftyTwoWeekHigh) / f.fiftyTwoWeekHigh) * 100).toFixed(1)}% from 52w high`
       : '';
-    const vsLow  = f.fiftyTwoWeekLow && f.price
+    const vsLow = f.fiftyTwoWeekLow && f.price
       ? ` | ${(((f.price - f.fiftyTwoWeekLow) / f.fiftyTwoWeekLow) * 100).toFixed(1)}% above 52w low`
       : '';
-    const range  = f.fiftyTwoWeekHigh != null && f.fiftyTwoWeekLow != null
+    const range = f.fiftyTwoWeekHigh != null && f.fiftyTwoWeekLow != null
       ? ` | 52w range: $${f.fiftyTwoWeekLow.toFixed(2)}–$${f.fiftyTwoWeekHigh.toFixed(2)}`
       : '';
     return `- **${f.ticker}** (${f.name}): ${price} ${pct} today${vsHigh}${vsLow}${range}`;
@@ -142,7 +142,7 @@ async function generateAlertContext({ ticker, direction, targetPrice, currentPri
     }
   });
 
-  const isAbove   = direction === 'above';
+  const isAbove = direction === 'above';
   const priceLine = currentPrice != null ? `Current price: $${Number(currentPrice).toFixed(2)}` : '';
   const rangeLine = name52wHigh && name52wLow
     ? `52-week range: $${Number(name52wLow).toFixed(2)}–$${Number(name52wHigh).toFixed(2)}`
@@ -244,16 +244,15 @@ function digestEmailHtml({ brief, funds, name, to, timeZone }) {
     .split(/\n{2,}/)
     .map(p => p.trim())
     .filter(Boolean)
-    .map(p => `<p style="margin:0 0 14px;font-size:14px;color:#1e293b;line-height:1.75;">${
-      p.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    }</p>`)
+    .map(p => `<p style="margin:0 0 14px;font-size:14px;color:#1e293b;line-height:1.75;">${p.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      }</p>`)
     .join('');
 
   // Fund performance table rows
   const fundRowsHtml = funds.map(f => {
-    const isUp  = f.changePct != null && f.changePct >= 0;
-    const clr   = isUp ? '#059669' : '#DC2626';
-    const pct   = f.changePct != null ? `${f.changePct >= 0 ? '+' : ''}${f.changePct.toFixed(2)}%` : '—';
+    const isUp = f.changePct != null && f.changePct >= 0;
+    const clr = isUp ? '#059669' : '#DC2626';
+    const pct = f.changePct != null ? `${f.changePct >= 0 ? '+' : ''}${f.changePct.toFixed(2)}%` : '—';
     const price = f.price != null ? `$${f.price.toFixed(2)}` : '—';
     return `
       <tr>
@@ -322,7 +321,7 @@ router.post('/brief', async (req, res) => {
   }
 
   try {
-    const funds      = (await Promise.all(favorites.slice(0, 10).map(fetchQuote))).filter(Boolean);
+    const funds = (await Promise.all(favorites.slice(0, 10).map(fetchQuote))).filter(Boolean);
     if (funds.length === 0) {
       return res.status(422).json({ error: 'Could not fetch quotes for any of the provided tickers' });
     }
@@ -344,7 +343,7 @@ router.post('/email', async (req, res) => {
   }
 
   const { to, name, favorites, articles, timeZone } = req.body;
-  if (!to)                                     return res.status(400).json({ error: 'to is required' });
+  if (!to) return res.status(400).json({ error: 'to is required' });
   if (!Array.isArray(favorites) || favorites.length === 0) {
     return res.status(400).json({ error: 'favorites array is required' });
   }
@@ -353,7 +352,7 @@ router.post('/email', async (req, res) => {
     const funds = (await Promise.all(favorites.slice(0, 10).map(fetchQuote))).filter(Boolean);
     const brief = await generateBrief({ funds, articles: articles || [], name, timeZone });
 
-    const from     = process.env.BREVO_SENDER_EMAIL || 'joaol.olivsilva@gmail.com';
+    const from = process.env.BREVO_SENDER_EMAIL || 'joaol.olivsilva@gmail.com';
     let dateLabel;
     try {
       const options = { weekday: 'long', month: 'short', day: 'numeric' };
@@ -366,14 +365,14 @@ router.post('/email', async (req, res) => {
     const emailResp = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'accept':       'application/json',
-        'api-key':      process.env.BREVO_API_KEY,
+        'accept': 'application/json',
+        'api-key': process.env.BREVO_API_KEY,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        sender:      { name: 'GS Fund Dashboard', email: from },
-        to:          [{ email: to, name: name || undefined }],
-        subject:     `Your Portfolio Brief — ${dateLabel}`,
+        sender: { name: 'GS Fund Dashboard', email: from },
+        to: [{ email: to, name: name || undefined }],
+        subject: `Your Portfolio Brief — ${dateLabel}`,
         htmlContent: digestEmailHtml({ brief, funds, name, to, timeZone }),
         textContent: brief,
       }),
@@ -406,7 +405,7 @@ router.post('/alert-context', async (req, res) => {
       const q = await fetchQuote(ticker);
       if (q) {
         fiftyTwoWeekHigh = fiftyTwoWeekHigh ?? q.fiftyTwoWeekHigh;
-        fiftyTwoWeekLow  = fiftyTwoWeekLow  ?? q.fiftyTwoWeekLow;
+        fiftyTwoWeekLow = fiftyTwoWeekLow ?? q.fiftyTwoWeekLow;
       }
     }
     const context = await generateAlertContext({
