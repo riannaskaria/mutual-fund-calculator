@@ -170,6 +170,10 @@ router.get('/stock-info/:ticker', async (req, res) => {
       avgVolume:        fmtVol(detail.averageVolume),
     };
     stockInfoCache.set(key, { data: payload, expiresAt: Date.now() + CACHE_TTL_MS });
+    if (stockInfoCache.size > 500) {
+      const OldestKey = stockInfoCache.keys().next().value;
+      stockInfoCache.delete(OldestKey);
+    }
     res.json(payload);
   } catch (err) {
     res.status(502).json({ error: err.message });
