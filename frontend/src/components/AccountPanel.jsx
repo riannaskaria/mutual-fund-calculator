@@ -1,7 +1,27 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useT } from '../theme';
 import API_BASE from '../apiBase';
-import { logTradeEvent } from '../api/mutualFundApi';
+import { logTradeEvent, fetchMorningBrief, sendDigestEmail } from '../api/mutualFundApi';
+
+// ─── fund family colors ───────────────────────────────────────────────────────
+// Real brand-adjacent colors per fund family — flat, no gradient
+function getFundColor(ticker) {
+    const t = (ticker || '').toUpperCase();
+    if (t.startsWith('V'))                                      return '#8b0000'; // Vanguard — deep crimson
+    if (t.startsWith('F'))                                      return '#005c3b'; // Fidelity — dark green
+    if (['AGTHX','AEPGX','AMCPX','ANCFX','CWGIX'].includes(t)) return '#1a3a6e'; // American Funds — navy
+    if (t.startsWith('SW') || t.startsWith('SN') || t.startsWith('SF') || t.startsWith('SH') || t.startsWith('SM')) return '#00407a'; // Schwab — cobalt
+    if (t.startsWith('TR') || t.startsWith('PR') || t.startsWith('PG') || t.startsWith('PB') || t.startsWith('RP')) return '#005f86'; // T. Rowe Price — teal-blue
+    if (t.startsWith('DO') || t.startsWith('DL') || t.startsWith('DF')) return '#2c3e50'; // Dodge & Cox — charcoal
+    if (t === 'PIMIX' || t === 'PTTRX')                        return '#1a1f5e'; // PIMCO — deep indigo
+    if (t.startsWith('OAK'))                                    return '#4a3728'; // Oakmark — warm brown
+    if (t.startsWith('LM') || t.startsWith('BA'))               return '#374151'; // Legg Mason / balanced — slate
+    // Hash-based fallback for anything else — deterministic, muted
+    let h = 0;
+    for (const c of t) h = Math.imul(h * 31 + c.charCodeAt(0), 1) | 0;
+    const hue = ((Math.abs(h) % 18) * 20 + 200) % 360; // stay in cool tones, vary by 20°
+    return `hsl(${hue}, 38%, 28%)`;
+}
 
 // ─── persistence helpers ──────────────────────────────────────────────────────
 const STORAGE_KEY = 'mf_account_v1';
@@ -20,8 +40,6 @@ function FundAvatarIcon({ size = 40, color = 'rgba(255,255,255,0.92)' }) {
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3,18 7,13 11,15 17,7 21,4" />
             <circle cx="21" cy="4" r="1.8" fill={color} stroke="none" />
-            <line x1="2" y1="21" x2="22" y2="21" />
-            <line x1="2" y1="21" x2="2" y2="3" />
         </svg>
     );
 }
@@ -97,8 +115,9 @@ function StatCard({ label, value, sub, accent }) {
     const T = useT();
     return (
         <div style={{
-            background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 10,
+            background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 12,
             padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 4,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.07)',
         }}>
             <span style={{ fontSize: 10, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>{label}</span>
             <span style={{ fontSize: 20, fontWeight: 700, color: accent || T.text }}>{value}</span>
@@ -147,6 +166,13 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     const [emailAlerts, setEmailAlerts] = useState(loadEmailAlerts);
     const [testStatus, setTestStatus] = useState(null); // null | 'sending' | 'ok' | 'error' | 'unconfigured'
     const [testError, setTestError] = useState('');
+    // Intelligence tab state
+    const [briefStatus, setBriefStatus] = useState(null); // null | 'loading' | 'done' | 'error'
+    const [briefText, setBriefText] = useState('');
+    const [briefFunds, setBriefFunds] = useState([]);
+    const [briefGeneratedAt, setBriefGeneratedAt] = useState(null);
+    const [briefError, setBriefError] = useState('');
+    const [briefEmailStatus, setBriefEmailStatus] = useState(null); // null | 'sending' | 'ok' | 'error'
     const overlayRef = useRef();
     const pictureInputRef = useRef(null);
 
@@ -207,6 +233,54 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
             setTimeout(() => setTestStatus(null), 6000);
         }
     }, [emailAlerts.email, profile.email]);
+
+    const generateBrief = useCallback(async (articlesArg) => {
+        const favTickers = [...(favProp instanceof Set ? favProp : new Set(account.favorites))];
+        if (favTickers.length === 0) {
+            setBriefError('Add some favorites first — star a fund in the watchlist to track it here.');
+            setBriefStatus('error');
+            return;
+        }
+        setBriefStatus('loading');
+        setBriefError('');
+        setBriefText('');
+        setBriefFunds([]);
+        try {
+            const result = await fetchMorningBrief({
+                favorites: favTickers,
+                articles: articlesArg || [],
+                name: profile.name,
+            });
+            setBriefText(result.brief || '');
+            setBriefFunds(result.funds || []);
+            setBriefGeneratedAt(result.generatedAt || new Date().toISOString());
+            setBriefStatus('done');
+            // Auto-send to registered alerts email (non-blocking)
+            try {
+                const alertsEmail = JSON.parse(localStorage.getItem('mf_email_alerts_v1') || '{}').email;
+                const sendTo = alertsEmail || profile.email;
+                if (sendTo) sendDigestEmail({ to: sendTo, name: profile.name, favorites: favTickers, articles: articlesArg || [] }).catch(() => {});
+            } catch { /* ignore */ }
+        } catch (e) {
+            setBriefError(e.message || 'Failed to generate brief.');
+            setBriefStatus('error');
+        }
+    }, [favProp, account.favorites, profile.name, profile.email]);
+
+    const emailBrief = useCallback(async () => {
+        const to = emailAlerts.email || profile.email;
+        if (!to || !briefText) return;
+        setBriefEmailStatus('sending');
+        try {
+            const favTickers = [...(favProp instanceof Set ? favProp : new Set(account.favorites))];
+            await sendDigestEmail({ to, name: profile.name, favorites: favTickers });
+            setBriefEmailStatus('ok');
+            setTimeout(() => setBriefEmailStatus(null), 5000);
+        } catch (e) {
+            setBriefEmailStatus('error');
+            setTimeout(() => setBriefEmailStatus(null), 5000);
+        }
+    }, [emailAlerts.email, profile.email, profile.name, briefText, favProp, account.favorites]);
 
     const handlePictureUpload = useCallback((e) => {
         const file = e.target.files?.[0];
@@ -303,12 +377,15 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
     };
 
     const tabBtn = (name) => ({
-        background: 'none', border: 'none',
-        borderBottom: activeTab === name ? `2px solid ${T.accent}` : '2px solid transparent',
-        padding: '10px 14px', fontSize: 12,
+        background: activeTab === name ? T.accent : T.solidPanel,
+        border: `1px solid ${activeTab === name ? T.accent : T.borderSub}`,
+        borderRadius: 9,
+        padding: '5px 11px', fontSize: 11,
         fontWeight: activeTab === name ? 600 : 400,
-        color: activeTab === name ? T.text : T.textMute,
+        color: activeTab === name ? '#fff' : T.textMute,
         cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.07)',
+        flexShrink: 0,
     });
 
     if (!open) return null;
@@ -338,7 +415,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                         padding: '14px 20px', borderBottom: `1px solid ${T.border}`,
                         display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
                     }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}> {'My Account'}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>My Account</div>
                         <button onClick={onClose} style={{
                             marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
                             color: T.textMute, fontSize: 20, lineHeight: 1, padding: 4, borderRadius: 4,
@@ -346,14 +423,14 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                     </div>
 
                     {/* compact avatar header */}
-                    <div style={{ padding: '12px 20px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ padding: '12px 20px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
                         {effectivePicture ? (
                             <img src={effectivePicture} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${T.border}` }} onError={e => { e.target.style.display = 'none'; }} />
                         ) : profile.name ? (
-                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials}</div>
+                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: T.inputBg, border: `1.5px solid ${T.borderSub}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: T.accent, flexShrink: 0 }}>{initials}</div>
                         ) : (
-                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <FundAvatarIcon size={22} />
+                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: T.inputBg, border: `1.5px solid ${T.borderSub}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <FundAvatarIcon size={22} color={T.accent} />
                             </div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -367,8 +444,8 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                     </div>
 
                     {/* tabs */}
-                    <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0, padding: '0 8px' }}>
-                        {['Profile', 'Portfolio', 'Favorites', 'Alerts', 'History', 'Projections'].map(t => (
+                    <div style={{ display: 'flex', flexShrink: 0, padding: '10px 12px 10px', gap: 6, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                        {['Profile', 'Portfolio', 'Favorites', 'Alerts', 'History', 'Projections', 'Intelligence'].map(t => (
                             <button key={t} onClick={() => setActiveTab(t)} style={tabBtn(t)}>{t}</button>
                         ))}
                     </div>
@@ -386,10 +463,10 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                             {effectivePicture ? (
                                                 <img src={effectivePicture} alt="" style={{ width: 80, height: 80, objectFit: 'cover', display: 'block' }} />
                                             ) : profile.name ? (
-                                                <div style={{ width: 80, height: 80, background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 700, color: '#fff' }}>{initials}</div>
+                                                <div style={{ width: 80, height: 80, background: T.inputBg, border: `2px solid ${T.borderSub}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 700, color: T.accent }}>{initials}</div>
                                             ) : (
-                                                <div style={{ width: 80, height: 80, background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <FundAvatarIcon size={44} />
+                                                <div style={{ width: 80, height: 80, background: T.inputBg, border: `2px solid ${T.borderSub}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <FundAvatarIcon size={44} color={T.accent} />
                                                 </div>
                                             )}
                                             {/* camera hover overlay */}
@@ -421,7 +498,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                 { label: 'Full Name', value: profile.name || '—' },
                                                 { label: 'Email Address', value: profile.email || '—' },
                                             ].map(({ label, value }) => (
-                                                <div key={label} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '10px 14px' }}>
+                                                <div key={label} style={{ background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 9, padding: '10px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                                                     <div style={{ fontSize: 9, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, marginBottom: 4 }}>{label}</div>
                                                     <div style={{ fontSize: 13, color: value === '—' ? T.textFaint : T.text, fontStyle: value === '—' ? 'italic' : 'normal' }}>{value}</div>
                                                 </div>
@@ -476,7 +553,7 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                         </div>
 
                                         {/* Enable toggle */}
-                                        <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <div style={{ background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>Price alert emails</div>
                                                 <div style={{ fontSize: 11, color: T.textMute, marginTop: 2 }}>
@@ -608,15 +685,16 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                         ? <EmptyState text="No investments logged yet. Add one above." />
                                         : positionTotals.map(({ ticker, total, fundName, entries }) => (
                                             <div key={ticker} style={{
-                                                background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 9,
+                                                background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 9,
                                                 padding: '12px 14px', marginBottom: 8,
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                             }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                     <div style={{
                                                         width: 30, height: 30, borderRadius: 6,
-                                                        background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+                                                        background: getFundColor(ticker),
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: 9, color: '#fff', fontWeight: 700, flexShrink: 0,
+                                                        fontSize: 9, color: 'rgba(255,255,255,0.92)', fontWeight: 700, flexShrink: 0,
                                                     }}>{ticker.slice(0, 3)}</div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{ticker}</div>
@@ -661,15 +739,18 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                             const isUp = (f.change ?? 0) >= 0;
                                             return (
                                                 <div key={ticker} style={{
-                                                    background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 9,
+                                                    background: T.solidPanel, border: `1px solid ${T.borderSub}`, borderRadius: 9,
                                                     padding: '11px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10,
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                                 }}>
                                                     <div style={{
-                                                        width: 30, height: 30, borderRadius: 6,
-                                                        background: `linear-gradient(135deg, ${T.brand}, ${T.positive})`,
+                                                        width: 32, height: 32, borderRadius: 7,
+                                                        background: getFundColor(ticker),
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: 9, color: '#fff', fontWeight: 700, flexShrink: 0,
-                                                    }}>{ticker.slice(0, 3)}</div>
+                                                        fontSize: 11, color: 'rgba(255,255,255,0.92)', fontWeight: 700,
+                                                        flexShrink: 0, letterSpacing: '-0.3px',
+                                                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)',
+                                                    }}>{ticker.slice(0, 2)}</div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{ticker}</div>
                                                         <div style={{ fontSize: 10, color: T.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(f.name || '').split(';')[0]}</div>
@@ -747,15 +828,16 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                             ? <EmptyState text="No active alerts. Set one using the 🔔 bell icon in any fund header." />
                                             : activeAlerts.map(a => (
                                                 <div key={a.id} style={{
-                                                    background: T.cardBg, border: `1px solid ${T.border}`,
+                                                    background: T.solidPanel, border: `1px solid ${T.borderSub}`,
                                                     borderRadius: 9, padding: '11px 14px', marginBottom: 8,
                                                     display: 'flex', alignItems: 'center', gap: 10,
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                                 }}>
                                                     <div style={{
                                                         width: 30, height: 30, borderRadius: 6,
-                                                        background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+                                                        background: getFundColor(a.ticker),
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: 9, color: '#fff', fontWeight: 700, flexShrink: 0,
+                                                        fontSize: 9, color: 'rgba(255,255,255,0.92)', fontWeight: 700, flexShrink: 0,
                                                     }}>{a.ticker.slice(0, 3)}</div>
                                                     <div style={{ flex: 1 }}>
                                                         <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{a.ticker}</div>
@@ -777,9 +859,10 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                             <SectionHeading>Triggered</SectionHeading>
                                             {triggered.map(a => (
                                                 <div key={a.id} style={{
-                                                    background: T.cardBg, border: `1px solid ${T.border}`,
+                                                    background: T.solidPanel, border: `1px solid ${T.borderSub}`,
                                                     borderRadius: 9, marginBottom: 8,
                                                     display: 'flex', overflow: 'hidden',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                                 }}>
                                                     <div style={{ width: 4, flexShrink: 0, background: T.positive, borderRadius: '9px 0 0 9px' }} />
                                                     <div style={{ flex: 1, padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -826,13 +909,14 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                         <div key={i} style={{
                                             display: 'flex', alignItems: 'center', gap: 10,
                                             padding: '10px 12px', borderRadius: 8, marginBottom: 6,
-                                            background: T.cardBg, border: `1px solid ${T.border}`,
+                                            background: T.solidPanel, border: `1px solid ${T.borderSub}`,
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                         }}>
                                             <div style={{
                                                 width: 28, height: 28, borderRadius: 5,
-                                                background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+                                                background: getFundColor(h.ticker),
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: 8, color: '#fff', fontWeight: 700, flexShrink: 0,
+                                                fontSize: 8, color: 'rgba(255,255,255,0.92)', fontWeight: 700, flexShrink: 0,
                                             }}>{h.ticker.slice(0, 3)}</div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{h.ticker}</div>
@@ -844,7 +928,211 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                 }
                             </div>
                         )}
-                        {/* ── PROJECTIONS TAB ── */}
+                        {/* ── INTELLIGENCE TAB ── */}
+                        {activeTab === 'Intelligence' && (() => {
+                            const favTickers = [...(favProp instanceof Set ? favProp : new Set(account.favorites))];
+                            const emailAddr  = emailAlerts.email || profile.email;
+                            return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                                    {/* Header card */}
+                                    <div style={{
+                                        background: `linear-gradient(135deg, ${T.brand}18, ${T.accent}12)`,
+                                        border: `1px solid ${T.accent}30`,
+                                        borderRadius: 12, padding: '16px 18px',
+                                        display: 'flex', alignItems: 'flex-start', gap: 14,
+                                    }}>
+                                        <div style={{
+                                            width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                                            background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"/>
+                                            </svg>
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 4 }}>GS Intelligence</div>
+                                            <div style={{ fontSize: 12, color: T.textSub, lineHeight: 1.55 }}>
+                                                AI-synthesizes your {favTickers.length > 0 ? `${favTickers.length} favorite fund${favTickers.length > 1 ? 's' : ''}` : 'favorites'} into a personalized morning briefing — live prices, news relevance, and portfolio outlook.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* No favorites warning */}
+                                    {favTickers.length === 0 && (
+                                        <div style={{ background: `${T.textMute}12`, border: `1px solid ${T.border}`, borderRadius: 10, padding: '14px 16px', fontSize: 12, color: T.textSub, lineHeight: 1.6 }}>
+                                            Star some funds in the watchlist to unlock your Intelligence brief.
+                                        </div>
+                                    )}
+
+                                    {/* Generate button */}
+                                    {favTickers.length > 0 && briefStatus !== 'loading' && (
+                                        <button
+                                            onClick={() => generateBrief([])}
+                                            style={{
+                                                background: `linear-gradient(135deg, ${T.brand}, ${T.accent})`,
+                                                color: '#fff', border: 'none', borderRadius: 10,
+                                                padding: '11px 22px', fontSize: 13, fontWeight: 600,
+                                                cursor: 'pointer', alignSelf: 'flex-start',
+                                                boxShadow: `0 4px 14px ${T.brand}40`,
+                                                display: 'flex', alignItems: 'center', gap: 8,
+                                            }}
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                            </svg>
+                                            {briefStatus === 'done' ? 'Regenerate Brief' : 'Generate Morning Brief'}
+                                        </button>
+                                    )}
+
+                                    {/* Loading state */}
+                                    {briefStatus === 'loading' && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '28px 0' }}>
+                                            <div style={{
+                                                width: 44, height: 44, borderRadius: '50%',
+                                                border: `3px solid ${T.border}`,
+                                                borderTopColor: T.accent,
+                                                animation: 'spin 0.8s linear infinite',
+                                            }} />
+                                            <div style={{ fontSize: 13, color: T.textSub, textAlign: 'center' }}>
+                                                Analyzing {favTickers.length} fund{favTickers.length > 1 ? 's' : ''} + market context…
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Error state */}
+                                    {briefStatus === 'error' && briefError && (
+                                        <div style={{ background: `${T.negative}12`, border: `1px solid ${T.negative}30`, borderRadius: 10, padding: '12px 16px', fontSize: 12, color: T.negative, lineHeight: 1.6 }}>
+                                            {briefError}
+                                        </div>
+                                    )}
+
+                                    {/* Brief result */}
+                                    {briefStatus === 'done' && briefText && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                                            {/* Timestamp + label */}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <div style={{ fontSize: 10, fontWeight: 700, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Portfolio Analysis</div>
+                                                {briefGeneratedAt && (
+                                                    <div style={{ fontSize: 10, color: T.textFaint }}>
+                                                        {new Date(briefGeneratedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* AI prose — rendered as paragraphs */}
+                                            <div style={{
+                                                background: T.cardBg, border: `1px solid ${T.border}`,
+                                                borderRadius: 12, padding: '18px 18px',
+                                                position: 'relative', overflow: 'hidden',
+                                            }}>
+                                                {/* Subtle accent bar */}
+                                                <div style={{
+                                                    position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+                                                    background: `linear-gradient(90deg, ${T.brand}, ${T.accent})`,
+                                                }} />
+                                                <div style={{ paddingTop: 4 }}>
+                                                    {briefText.split(/\n{2,}/).map((para, i) => (
+                                                        <p key={i} style={{
+                                                            margin: i === 0 ? '0 0 12px' : '0 0 12px',
+                                                            fontSize: 13, color: T.text, lineHeight: 1.75,
+                                                        }}>
+                                                            {para.trim().split(/\*\*(.*?)\*\*/).map((seg, j) =>
+                                                                j % 2 === 1
+                                                                    ? <strong key={j} style={{ color: T.accent }}>{seg}</strong>
+                                                                    : seg
+                                                            )}
+                                                        </p>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Live fund performance table */}
+                                            {briefFunds.length > 0 && (
+                                                <div>
+                                                    <div style={{ fontSize: 10, fontWeight: 700, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Live Prices</div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                        {briefFunds.map(f => {
+                                                            const isUp  = f.changePct != null && f.changePct >= 0;
+                                                            const clr   = isUp ? T.positive : T.negative;
+                                                            const pct   = f.changePct != null ? `${f.changePct >= 0 ? '+' : ''}${f.changePct.toFixed(2)}%` : '—';
+                                                            const price = f.price != null ? `$${f.price.toFixed(2)}` : '—';
+                                                            const barW  = f.changePct != null ? Math.min(Math.abs(f.changePct) * 12, 100) : 0;
+                                                            return (
+                                                                <div key={f.ticker} style={{
+                                                                    background: T.cardBg, border: `1px solid ${T.border}`,
+                                                                    borderRadius: 8, padding: '10px 14px',
+                                                                    display: 'flex', alignItems: 'center', gap: 10,
+                                                                    position: 'relative', overflow: 'hidden',
+                                                                }}>
+                                                                    {/* momentum bar */}
+                                                                    <div style={{
+                                                                        position: 'absolute', bottom: 0, left: 0,
+                                                                        width: `${barW}%`, height: 2,
+                                                                        background: clr, opacity: 0.5,
+                                                                        transition: 'width 0.4s ease',
+                                                                    }} />
+                                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                                        <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{f.ticker}</div>
+                                                                        <div style={{ fontSize: 10, color: T.textMute, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+                                                                    </div>
+                                                                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{price}</div>
+                                                                        <div style={{ fontSize: 11, fontWeight: 600, color: clr }}>{pct}</div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Email brief button */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                                <button
+                                                    onClick={emailBrief}
+                                                    disabled={!emailAddr || briefEmailStatus === 'sending'}
+                                                    style={{
+                                                        background: briefEmailStatus === 'ok' ? T.positive : briefEmailStatus === 'error' ? T.negative : T.cardBg,
+                                                        color: briefEmailStatus === 'ok' || briefEmailStatus === 'error' ? '#fff' : T.text,
+                                                        border: `1px solid ${briefEmailStatus === 'ok' ? T.positive : briefEmailStatus === 'error' ? T.negative : T.border}`,
+                                                        borderRadius: 8, padding: '8px 16px',
+                                                        fontSize: 12, fontWeight: 600, cursor: emailAddr ? 'pointer' : 'not-allowed',
+                                                        opacity: (!emailAddr || briefEmailStatus === 'sending') ? 0.6 : 1,
+                                                        display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s',
+                                                    }}
+                                                >
+                                                    {briefEmailStatus === 'sending' && (
+                                                        <div style={{ width: 10, height: 10, border: `2px solid ${T.border}`, borderTopColor: T.accent, borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                                                    )}
+                                                    {briefEmailStatus === 'sending' ? 'Sending…'
+                                                        : briefEmailStatus === 'ok' ? '✓ Sent to ' + emailAddr
+                                                        : briefEmailStatus === 'error' ? 'Send failed'
+                                                        : (
+                                                            <>
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                                                                </svg>
+                                                                Email this brief
+                                                            </>
+                                                        )
+                                                    }
+                                                </button>
+                                                {!emailAddr && (
+                                                    <span style={{ fontSize: 11, color: T.textFaint, fontStyle: 'italic' }}>Set an email in Profile first</span>
+                                                )}
+                                            </div>
+
+                                        </div>
+                                    )}
+
+                                </div>
+                            );
+                        })()}
+
                         {activeTab === 'Projections' && (
                             <div>
                                 {savedProjections.length === 0
@@ -869,9 +1157,10 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                                                     const gainPct = p.totalGainPct;
                                                     return (
                                                         <div key={p.id} style={{
-                                                            background: T.cardBg, border: `1px solid ${T.border}`,
+                                                            background: T.solidPanel, border: `1px solid ${T.borderSub}`,
                                                             borderRadius: 10, overflow: 'hidden',
                                                             display: 'flex', flexDirection: 'row',
+                                                            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                                         }}>
                                                             <div style={{ width: 4, flexShrink: 0, background: T.accent, borderRadius: '10px 0 0 10px' }} />
                                                             <div style={{ flex: 1, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -945,6 +1234,10 @@ export default function AccountPanel({ open, onClose, funds = [], quote, selecte
                 @keyframes slideInRight {
                     from { transform: translateX(100%); opacity: 0; }
                     to   { transform: translateX(0);    opacity: 1; }
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to   { transform: rotate(360deg); }
                 }
             `}</style>
         </>

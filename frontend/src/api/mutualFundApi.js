@@ -220,3 +220,41 @@ export async function fetchStockInfo(ticker) {
   });
   return handleResponse(response);
 }
+
+/**
+ * Generate an AI morning brief for a list of favorite tickers.
+ * Returns { brief: string, funds: [...], generatedAt: ISO }
+ * @param {{ favorites: string[], articles?: object[], name?: string }} opts
+ */
+export async function fetchMorningBrief({ favorites, articles = [], name = '' } = {}) {
+  if (useMock) {
+    return {
+      brief: 'Mock mode: AI brief not available. Enable the backend to use this feature.',
+      funds: [],
+      generatedAt: new Date().toISOString(),
+    };
+  }
+  const response = await fetch(`${baseURL}/digest/brief`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ favorites, articles, name }),
+    signal: AbortSignal.timeout(30000),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Send an AI portfolio digest email for a list of favorite tickers.
+ * Returns { ok: true, brief: string }
+ * @param {{ to: string, name?: string, favorites: string[], articles?: object[] }} opts
+ */
+export async function sendDigestEmail({ to, name = '', favorites, articles = [] } = {}) {
+  if (useMock) return { ok: true, brief: 'Mock mode.' };
+  const response = await fetch(`${baseURL}/digest/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to, name, favorites, articles }),
+    signal: AbortSignal.timeout(35000),
+  });
+  return handleResponse(response);
+}

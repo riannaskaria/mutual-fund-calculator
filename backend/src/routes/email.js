@@ -136,7 +136,7 @@ function layout({ innerHtml, unsubscribeUrl }) {
 }
 
 // ─── alert email ──────────────────────────────────────────────────────────────
-function alertHtml({ ticker, targetPrice, direction, currentPrice, to }) {
+function alertHtml({ ticker, targetPrice, direction, currentPrice, to, aiContext }) {
   const isAbove      = direction === 'above';
   const accentClr    = isAbove ? '#059669' : '#DC2626';
   const accentBg     = isAbove ? '#F0FDF4' : '#FEF2F2';
@@ -210,6 +210,26 @@ function alertHtml({ ticker, targetPrice, direction, currentPrice, to }) {
         </table>
       </td></tr>
     </table>
+
+    ${aiContext ? `
+    <!-- AI Context -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr><td style="padding:0 28px 20px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFF;border:1px solid #D1DEFF;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:16px 18px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <div style="width:20px;height:20px;background:linear-gradient(135deg,#092C61,#3b7dd8);border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/></svg>
+                </div>
+                <span style="font-size:10px;font-weight:700;color:#3b7dd8;text-transform:uppercase;letter-spacing:0.08em;">GS Intelligence</span>
+              </div>
+              <p style="margin:0;font-size:13px;color:#1e293b;line-height:1.7;">${aiContext}</p>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>` : ''}
 
     <!-- CTA -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -335,6 +355,25 @@ function unsubscribePage(email) {
 </html>`;
 }
 
+// ─── AI context helper ────────────────────────────────────────────────────────
+
+async function fetchAlertAiContext({ ticker, direction, targetPrice, currentPrice }) {
+  if (!process.env.GEMINI_API_KEY) return null;
+  try {
+    const resp = await fetch(`${backendUrl()}/api/digest/alert-context`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticker, direction, targetPrice, currentPrice }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.context || null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── routes ───────────────────────────────────────────────────────────────────
 
 // GET /api/email/unsubscribe?email=xxx
@@ -351,7 +390,7 @@ router.post('/send-alert', async (req, res) => {
 
   if (!to)     return res.status(400).json({ error: 'to is required' });
   if (!ticker) return res.status(400).json({ error: 'ticker is required' });
-  if (!isConfigured()) return res.status(503).json({ error: 'Email not configured. Add SMTP_USER and SMTP_PASS to backend/.env', unconfigured: true });
+  if (!isConfigured()) return res.status(503).json({ error: 'Email not configured. Add BREVO_API_KEY to backend/.env', unconfigured: true });
   if (isUnsubscribed(to)) return res.json({ ok: true, skipped: 'unsubscribed' });
 
   try {
@@ -359,11 +398,14 @@ router.post('/send-alert', async (req, res) => {
     const tp = Number(targetPrice);
     const cp = currentPrice != null ? Number(currentPrice) : null;
 
+    // Fetch AI context in parallel with email build — non-blocking if it fails
+    const aiContext = await fetchAlertAiContext({ ticker, direction, targetPrice: tp, currentPrice: cp });
+
     await sendEmail({
       to,
       subject: `${isAbove ? '↑' : '↓'} ${ticker} alert triggered — $${cp != null ? cp.toFixed(2) : tp.toFixed(2)}`,
-      html: alertHtml({ ticker, targetPrice: tp, direction, currentPrice: cp, to }),
-      text: `Price alert triggered for ${ticker}.\nCurrent: $${cp ?? '—'} | Target: $${tp.toFixed(2)} (${direction})\n\nUnsubscribe: ${backendUrl()}/api/email/unsubscribe?email=${encodeURIComponent(to)}`,
+      html: alertHtml({ ticker, targetPrice: tp, direction, currentPrice: cp, to, aiContext }),
+      text: `Price alert triggered for ${ticker}.\nCurrent: $${cp ?? '—'} | Target: $${tp.toFixed(2)} (${direction})${aiContext ? `\n\nGS Intelligence: ${aiContext}` : ''}\n\nUnsubscribe: ${backendUrl()}/api/email/unsubscribe?email=${encodeURIComponent(to)}`,
     });
 
     res.json({ ok: true });
@@ -378,7 +420,7 @@ router.post('/test', async (req, res) => {
   const { to } = req.body;
   console.log('[email/test] request received, to:', to, 'configured:', isConfigured());
   if (!to) return res.status(400).json({ error: 'to is required' });
-  if (!isConfigured()) return res.status(503).json({ error: 'Email not configured. Add SMTP_USER and SMTP_PASS to backend/.env', unconfigured: true });
+  if (!isConfigured()) return res.status(503).json({ error: 'Email not configured. Add BREVO_API_KEY to backend/.env', unconfigured: true });
 
   try {
     await sendEmail({

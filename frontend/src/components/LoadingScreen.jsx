@@ -98,7 +98,7 @@ export default function LoadingScreen({ onDone }) {
         alignItems: 'center', gap: 10,
       }}>
         <span style={{
-          fontFamily: "'GS Sans', 'Helvetica Neue', Arial, sans-serif",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif",
           fontSize: 19,
           fontWeight: 500,
           color: '#dce8f4',
