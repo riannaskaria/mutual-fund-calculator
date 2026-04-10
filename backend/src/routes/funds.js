@@ -125,49 +125,10 @@ router.get('/stock-info/:ticker', async (req, res) => {
 
     const data = await fetchStockInfo(key);
 
-    const profile = data.assetProfile || {};
-    const detail  = data.summaryDetail || {};
-    const stats   = data.defaultKeyStatistics || {};
-    const fin     = data.financialData || {};
-
-    // yahoo-finance2 v3 returns plain numbers — helpers to normalise
-    const num  = v => (v != null && !isNaN(v) ? v : null);
-    const pct  = v => { const n = num(v); return n != null ? (n * 100).toFixed(2) + '%' : null; };
-    const fmtVol = v => {
-      if (v == null) return null;
-      if (v >= 1_000_000_000) return (v / 1_000_000_000).toFixed(2) + 'B';
-      if (v >= 1_000_000)     return (v / 1_000_000).toFixed(2) + 'M';
-      if (v >= 1_000)         return (v / 1_000).toFixed(0) + 'K';
-      return String(v);
-    };
-
     const payload = {
       ticker: key,
-      // company identity
-      sector:      profile.sector    || null,
-      industry:    profile.industry  || null,
-      country:     profile.country   || null,
-      website:     profile.website   || null,
-      employees:   profile.fullTimeEmployees || null,
-      description: profile.longBusinessSummary || null,
-      // valuation — plain numbers; frontend formats these with toFixed / fmtVol
-      marketCap:   num(detail.marketCap),
-      beta:        num(detail.beta) ?? num(stats.beta),
-      trailingPE:  num(detail.trailingPE),
-      forwardPE:   num(detail.forwardPE),
-      priceToBook: num(stats.priceToBook),
-      bookValue:   num(stats.bookValue),
-      // income / returns — pre-formatted as percentage strings for direct display
-      dividendYield:  pct(detail.dividendYield ?? detail.trailingAnnualDividendYield),
-      earningsGrowth: pct(fin.earningsGrowth),
-      revenueGrowth:  pct(fin.revenueGrowth),
-      returnOnEquity: pct(fin.returnOnEquity),
-      returnOnAssets: pct(fin.returnOnAssets),
-      // price context
-      fiftyTwoWeekHigh: num(detail.fiftyTwoWeekHigh),
-      fiftyTwoWeekLow:  num(detail.fiftyTwoWeekLow),
-      fiftyDayAverage:  num(detail.fiftyDayAverage),
-      avgVolume:        fmtVol(detail.averageVolume),
+      isAI: true,
+      ...data, // Contains objective, strategy, risks, notes, and exact pre-formatted numbers from Gemini
     };
     stockInfoCache.set(key, { data: payload, expiresAt: Date.now() + CACHE_TTL_MS });
     if (stockInfoCache.size > 500) {
