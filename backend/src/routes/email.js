@@ -313,6 +313,17 @@ function testHtml({ to }) {
 
 // ─── unsubscribe confirmation page ────────────────────────────────────────────
 function unsubscribePage(email) {
+  const escapeHTML = str => str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag])
+  );
+  const safeEmail = escapeHTML(email);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -346,7 +357,7 @@ function unsubscribePage(email) {
       <div class="icon">&#10003;</div>
       <h1>You've been unsubscribed</h1>
       <p>You will no longer receive price alert emails.</p>
-      <div class="email-chip">${email}</div>
+      <div class="email-chip">${safeEmail}</div>
       <p>You can re-enable alerts at any time in<br><strong style="color:#092C61;">Account &rarr; Profile &rarr; Email Alerts</strong>.</p>
       <p class="note">GS Fund Dashboard &nbsp;&middot;&nbsp; Price alerts are for informational purposes only.</p>
     </div>

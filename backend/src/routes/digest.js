@@ -69,9 +69,8 @@ async function generateBrief({ funds, articles, name, timeZone }) {
     tools: [{ googleSearch: {} }],
     systemInstruction: 'You are a Goldman Sachs senior portfolio manager. Be confident, direct, and leverage your live search capabilities to deeply understand market moves. No filler, no robotic phrasing.',
     generationConfig: {
-      temperature: 0.2, // lower temp for more deterministic, focused, and faster insights
-      maxOutputTokens: 250, // Forces the model to stop generating rapidly (prevents runaway long responses)
-      topK: 1 // Forces greedy decoding (fastest generation path, skips complex probability calculations)
+      temperature: 0.2,
+      maxOutputTokens: 800,
     }
   });
 
@@ -152,8 +151,7 @@ async function generateAlertContext({ ticker, direction, targetPrice, currentPri
     systemInstruction: 'You are a Goldman Sachs senior advisor. Provide exactly 1-2 sentence insights on market movements using live search data.',
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 60, // Alerts only need 1-2 sentences. Hard stop at 60 tokens for instant generation.
-      topK: 1
+      maxOutputTokens: 100,
     }
   });
 
