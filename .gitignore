@@ -2,7 +2,7 @@
 node_modules/
 **/node_modules/
 
-# Environment variables — never commit secrets
+# Environment variables (keep .env.example tracked)
 .env
 **/.env
 
@@ -14,3 +14,9 @@ dist/
 .DS_Store
 **/.DS_Store
 Thumbs.db
+
+# Local tooling
+.neurotrace/
+.vscode/
+.idea/
+*.swp
